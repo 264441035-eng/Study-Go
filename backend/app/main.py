@@ -3,6 +3,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers import base, character, task
+
 app = FastAPI(title="Study-Go API")
 
 # フロントエンドのオリジンを環境変数で許可（カンマ区切り）
@@ -25,3 +27,11 @@ def health() -> dict[str, str]:
 @app.get("/api/hello")
 def hello() -> dict[str, str]:
     return {"message": "Hello from FastAPI on ECS Fargate"}
+
+
+# 新機能は app/routers/ 配下にファイルを追加し、ここで include_router するだけでよい。
+app.include_router(base.router)
+app.include_router(character.router)
+app.include_router(task.router)
+
+
