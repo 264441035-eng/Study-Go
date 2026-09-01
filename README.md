@@ -45,8 +45,18 @@ npm run dev                         # http://localhost:5173
 npm run build                       # 型チェック + 本番ビルド
 ```
 
-## デプロイ（予定）
+## CI / デプロイ
 
-main ブランチへのマージで GitHub Actions が起動し、
-Docker イメージを ECR に push → ECS サービスをローリング更新する。
+GitHub Actions で以下を実行する（`.github/workflows/`）。
+
+- **`ci.yml`**（Pull Request 時）: backend の ruff/pytest、frontend の eslint/build/vitest
+- **`deploy.yml`**（main へ push 時）: OIDC で AWS を assume → Docker イメージを ECR に push
+  → 現行 task definition のイメージだけ差し替えて ECS サービスをローリング更新
+
 リージョンは東京 (`ap-northeast-1`)。
+
+### 事前設定（デプロイに必要）
+
+1. `infra/` を `terraform apply` してインフラと OIDC ロールを作成
+2. 出力された `github_actions_role_arn` を、リポジトリの
+   **Settings → Secrets and variables → Actions** に `AWS_ROLE_ARN` として登録
