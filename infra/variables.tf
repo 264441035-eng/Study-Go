@@ -71,3 +71,16 @@ variable "github_repo" {
   type        = string
   default     = "264441035-eng/Study-Go"
 }
+
+variable "github_sub_claims" {
+  description = <<-EOT
+    OIDC の sub クレームに対する許可パターン（StringLike）。
+    この組織は sub に不変の数値ID (owner_id / repo_id) を埋め込む設定のため、
+    通常形式と ID 付き形式の両方を列挙する。
+  EOT
+  type        = list(string)
+  default = [
+    "repo:264441035-eng/Study-Go:*",
+    "repo:264441035-eng@292752477/Study-Go@1353213705:*",
+  ]
+}

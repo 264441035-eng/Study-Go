@@ -23,11 +23,13 @@ data "aws_iam_policy_document" "github_assume" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # 対象リポジトリの全ブランチからの assume を許可
+    # 対象リポジトリの全ブランチからの assume を許可。
+    # この組織は OIDC の subject に不変の数値ID (owner_id / repo_id) を含める設定のため、
+    # 通常形式と ID 付き形式の両方を許可する（var.github_sub_claims）。
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:*"]
+      values   = var.github_sub_claims
     }
   }
 }
