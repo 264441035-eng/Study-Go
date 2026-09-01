@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import base, character, task
+from app.routers import base, character, chat, encounter, task
 
 app = FastAPI(title="Study-Go API")
 
@@ -32,6 +32,8 @@ def hello() -> dict[str, str]:
 # 新機能は app/routers/ 配下にファイルを追加し、ここで include_router するだけでよい。
 app.include_router(base.router)
 app.include_router(character.router)
+app.include_router(chat.router)
+app.include_router(encounter.router)
 app.include_router(task.router)
 
 
