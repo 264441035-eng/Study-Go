@@ -1,16 +1,22 @@
 # Study-Go
 
 TypeScript フロントエンド (React + Vite) と Python バックエンド (FastAPI) のモノレポ。
-main へマージすると GitHub Actions で AWS ECS Fargate へデプロイする構成を目指す。
+`main` へマージすると GitHub Actions が AWS ECS Fargate へ自動デプロイする。
+
+- 公開 URL（ALB）: http://study-go-alb-666742485.ap-northeast-1.elb.amazonaws.com
+- リージョン: 東京 (`ap-northeast-1`)　/　AWS アカウント: `926736850971`
 
 ## 構成
 
 ```
-frontend/   React + Vite + TypeScript（ビルド後 nginx で配信）
+frontend/   React + Vite + TypeScript（ビルド後 nginx で静的配信）
 backend/    FastAPI（uvicorn）
-infra/      Terraform（VPC / ECR / ALB / ECS Fargate）※作成予定
-.github/    GitHub Actions（CI / デプロイ）※作成予定
+infra/      Terraform（VPC / ECR / ALB / ECS Fargate / IAM / GitHub OIDC）
+.github/    GitHub Actions（ci.yml = CI / deploy.yml = デプロイ）
 ```
+
+アクセス経路: `ユーザー → ALB(:80) → ECS Fargate`。ALB がパスでルーティングし、
+`/api/*`・`/health` は backend、それ以外は frontend に振り分ける（＝同一オリジン）。
 
 ## ローカル開発
 
@@ -49,14 +55,81 @@ npm run build                       # 型チェック + 本番ビルド
 
 GitHub Actions で以下を実行する（`.github/workflows/`）。
 
-- **`ci.yml`**（Pull Request 時）: backend の ruff/pytest、frontend の eslint/build/vitest
-- **`deploy.yml`**（main へ push 時）: OIDC で AWS を assume → Docker イメージを ECR に push
-  → 現行 task definition のイメージだけ差し替えて ECS サービスをローリング更新
+- **`ci.yml`**（Pull Request 時）: `backend` ジョブ（ruff + pytest）と `frontend` ジョブ
+  （eslint + `vite build` + vitest）。この 2 ジョブは `main` のブランチ保護で必須化している（後述）。
+- **`deploy.yml`**（`main` へ push 時）: 下記フローで backend/frontend を並列デプロイ。
 
-リージョンは東京 (`ap-northeast-1`)。
+### デプロイの流れ（`deploy.yml`）
 
-### 事前設定（デプロイに必要）
+```
+main へ push
+  └─ OIDC で AWS ロール(AWS_ROLE_ARN)を一時 assume（アクセスキー不要）
+       └─ ECR ログイン
+            └─ Docker build → ECR へ push（タグ = commit SHA と latest）
+                 └─ 現行 task definition を取得しイメージだけ差し替えて登録
+                      └─ ecs update-service でローリング更新（安定するまで待機）
+```
 
-1. `infra/` を `terraform apply` してインフラと OIDC ロールを作成
-2. 出力された `github_actions_role_arn` を、リポジトリの
-   **Settings → Secrets and variables → Actions** に `AWS_ROLE_ARN` として登録
+- イメージ更新は CI が担当し、Terraform 側は ECS の `task_definition` 変更を無視する
+  （`ignore_changes`）。**インフラ（Terraform）とデプロイ（CI）の責務を分離**している。
+- 通常運用では `main` にマージするだけでデプロイされる。手動再実行は Actions の
+  `deploy` ワークフローを `Run workflow`（workflow_dispatch）で起動、または
+  `gh run rerun <run-id>`。
+
+### 初回セットアップ（インフラ構築とデプロイ有効化）
+
+1. インフラ構築（`infra/README.md` も参照）
+   ```bash
+   cd infra
+   terraform init
+   terraform plan
+   terraform apply          # VPC/ECR/ALB/ECS/IAM/OIDC を東京に作成（課金発生）
+   ```
+2. 出力 `github_actions_role_arn` を、リポジトリの
+   **Settings → Secrets and variables → Actions** に **`AWS_ROLE_ARN`** として登録
+   （CLI: `gh secret set AWS_ROLE_ARN --body "<role-arn>"`）。
+3. `main` へ push するとデプロイが走る。初回はイメージ push 後に ECS が healthy になる。
+
+> **注意（GitHub OIDC の subject 形式）**
+> この組織は OIDC の `sub` クレームに不変の数値 ID を埋め込む設定になっており、
+> 実際の subject は `repo:<owner>@<owner_id>/<repo>@<repo_id>:...` の形になる。
+> そのため IAM ロールの信頼ポリシーは通常形式だけでなく **ID 付き形式**も許可している
+> （`infra/variables.tf` の `github_sub_claims`）。`Not authorized to perform
+> sts:AssumeRoleWithWebIdentity` が出た場合は、CloudTrail の `AssumeRoleWithWebIdentity`
+> イベントで実際の `sub` を確認し、`github_sub_claims` を合わせる。
+
+### コストと撤去
+
+ALB + NAT Gateway + Fargate ×2 が常時課金対象（概算で月 $60 前後）。
+使わない場合は撤去する:
+
+```bash
+cd infra
+terraform destroy
+```
+
+## ブランチ保護（`main`）
+
+`main` 宛の Pull Request は CI（`backend` / `frontend` ジョブ）が成功しないと
+マージできないよう保護している。設定には **リポジトリの admin 権限が必要**。
+
+`gh` で設定する例（admin 権限のあるアカウントで実行）:
+
+```bash
+gh api -X PUT repos/264441035-eng/Study-Go/branches/main/protection \
+  --input - <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["backend", "frontend"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+JSON
+```
+
+- `contexts` は CI の 2 ジョブ名。`strict: true` は「main に追随済みのブランチのみマージ可」。
+- 画面から行う場合: **Settings → Branches → Add branch ruleset / protection rule** で
+  `main` に対し *Require status checks to pass* を有効化し、`backend` と `frontend` を選択。
