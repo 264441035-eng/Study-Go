@@ -1,0 +1,82 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# OIDC で AWS ロールを assume するために id-token: write が必要
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECS_CLUSTER: study-go-cluster
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      # backend が落ちても frontend は続行できるよう fail-fast を無効化
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            service: study-go-backend
+            family: study-go-backend
+            container: backend
+            ecr: study-go-backend
+            context: ./backend
+          - name: frontend
+            service: study-go-frontend
+            family: study-go-frontend
+            container: frontend
+            ecr: study-go-frontend
+            context: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMAGE="$REGISTRY/${{ matrix.ecr }}:${{ github.sha }}"
+          docker build -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
+          docker push "$IMAGE"
+          docker push "$REGISTRY/${{ matrix.ecr }}:latest"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # Terraform 管理の現行 task definition を取得し、新イメージだけ差し替える
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ matrix.family }} \
+            --query taskDefinition > task-def.json
+
+      - name: Render task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: ${{ matrix.container }}
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ matrix.service }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
