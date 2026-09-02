@@ -58,7 +58,7 @@ def main() -> None:
             break
 
         record(Role.user, user)
-        text, state = conv.next_message(history)
+        text, state = conv.next_message(history, session)
         record(Role.assistant, text)
         print(f"\nAI> {text}")
         print(f"    [state={state}]")

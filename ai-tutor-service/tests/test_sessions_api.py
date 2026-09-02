@@ -101,6 +101,16 @@ def test_finish_returns_assessment_and_report():
     assert body["strengths"] and body["summary"]
 
 
+def test_finish_summary_is_natural_japanese():
+    sid = _start()
+    client.post(f"/sessions/{sid}/messages", headers=HEADERS, json={"message": "二次関数"})
+    resp = client.post(f"/sessions/{sid}/finish", headers=HEADERS)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "review_vertex_form" not in body["summary"]
+    assert "平方完成と頂点形式の関係" in body["summary"]
+
+
 def test_finish_persists_assessment_and_student_model():
     sid = _start()
     client.post(f"/sessions/{sid}/finish", headers=HEADERS)

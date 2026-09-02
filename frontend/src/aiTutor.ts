@@ -1,6 +1,7 @@
 // AI Tutor Service クライアント。
-// 本番は VITE_AI_TUTOR_URL に AI Tutor の URL を渡す。未設定時は localhost:8000。
-const AI_TUTOR_BASE = import.meta.env.VITE_AI_TUTOR_URL ?? "http://localhost:8000";
+// Frontend は自前バックエンドを経由して ai-tutor-service を呼ぶ。
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const AI_TUTOR_BASE = import.meta.env.VITE_AI_TUTOR_URL ?? API_BASE;
 
 export type ConversationState = "questioning" | "ready_to_finish";
 
@@ -51,18 +52,18 @@ export function getTokenFromUrl(): string | null {
 // 本番では配布トークン (getTokenFromUrl) を使う。
 // ここでは local 専用のデモ用トークン払い出しを叩く (APP_ENV=local のみ有効)。
 export async function fetchDevToken(userId = "demo-student"): Promise<string> {
-  const data = await post<{ token: string }>("/dev/token", null, { user_id: userId });
+  const data = await post<{ token: string }>('/api/chat/dev/token', null, { user_id: userId });
   return data.token;
 }
 
 export function startSession(token: string) {
-  return post<StartSessionResponse>("/sessions", token);
+  return post<StartSessionResponse>('/api/chat/sessions', token);
 }
 
 export function sendMessage(token: string, sessionId: string, message: string) {
-  return post<SendMessageResponse>(`/sessions/${sessionId}/messages`, token, { message });
+  return post<SendMessageResponse>(`/api/chat/sessions/${sessionId}/messages`, token, { message });
 }
 
 export function finishSession(token: string, sessionId: string) {
-  return post<FinishResponse>(`/sessions/${sessionId}/finish`, token);
+  return post<FinishResponse>(`/api/chat/sessions/${sessionId}/finish`, token);
 }

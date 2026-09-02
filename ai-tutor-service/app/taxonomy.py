@@ -26,6 +26,13 @@ TAXONOMY: dict[str, dict[str, list[str]]] = {
             "graph_and_parabola",
             "max_min",
         ],
+        "linear_functions": [
+            "definition_and_form",
+            "slope",
+            "rate_of_change",
+            "y_intercept",
+            "equation_and_graph",
+        ],
         "sets_and_logic": [
             "sets",
             "necessary_sufficient_condition",

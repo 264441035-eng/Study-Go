@@ -13,14 +13,26 @@ def compute_xp(overall_score: int) -> int:
     return round(overall_score * 0.8)
 
 
+def _humanize_next_action(action: str | None) -> str:
+    if not action:
+        return ""
+    mapping = {
+        "review_vertex_form": "平方完成と頂点形式の関係を整理して理解を深めましょう。",
+        "review": "関連する概念をもう一度確認しましょう。",
+    }
+    return mapping.get(action, action)
+
+
 def _build_comment(assessment: Assessment) -> str:
     parts: list[str] = []
     if assessment.strengths:
         parts.append("・".join(assessment.strengths) + " は理解できています。")
     if assessment.weaknesses:
-        parts.append("次回は " + "・".join(assessment.weaknesses) + " を確認しましょう。")
-    if assessment.recommended_next_action:
-        parts.append(assessment.recommended_next_action)
+        weak = "・".join(assessment.weaknesses)
+        parts.append(f"次回は {weak} を確認しましょう。")
+    next_action = _humanize_next_action(assessment.recommended_next_action)
+    if next_action:
+        parts.append(next_action)
     return " ".join(parts) or "お疲れさまでした。"
 
 

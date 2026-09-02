@@ -79,14 +79,14 @@ def send_message(
     conv: ConversationService = Depends(get_conversation_service),
     settings: Settings = Depends(get_settings),
 ) -> SendMessageResponse:
-    _load_owned_active_session(repo, session_id, user_id)
+    session = _load_owned_active_session(repo, session_id, user_id)
     limits.check_message_length(body.message, settings)
 
     repo.add_message(
         ConversationMessage(session_id=session_id, role=Role.user, content=body.message)
     )
     history = repo.get_messages(session_id)
-    text, state = conv.next_message(history)
+    text, state = conv.next_message(history, session)
     repo.add_message(
         ConversationMessage(session_id=session_id, role=Role.assistant, content=text)
     )
