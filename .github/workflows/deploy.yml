@@ -64,6 +64,10 @@ jobs:
           BUILD_ARGS=()
           if [ "${{ matrix.name }}" = "frontend" ]; then
             BUILD_ARGS+=(--build-arg "VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY")
+            # backend/AI Tutor とも空文字 = 同一 ALB オリジンへ相対アクセスさせる。
+            # 未指定だと auth.ts/aiTutor.ts が localhost:8000 に落ち、ブラウザで Failed to fetch になる。
+            BUILD_ARGS+=(--build-arg "VITE_API_BASE_URL=")
+            BUILD_ARGS+=(--build-arg "VITE_AI_TUTOR_URL=")
           fi
           docker build "${BUILD_ARGS[@]}" -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
           docker push "$IMAGE"
