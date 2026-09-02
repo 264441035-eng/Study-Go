@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
+# AI Tutor の URL。既定は空 = 同一 ALB オリジンへ相対アクセス (/sessions* を相乗り)。
+# ローカルの `npm run build` (未指定) は aiTutor.ts 側で localhost:8000 に落ちる。
+ARG VITE_AI_TUTOR_URL=""
+ENV VITE_AI_TUTOR_URL=$VITE_AI_TUTOR_URL
 # Google Maps表示に使うAPIキー。ビルド時に埋め込まれる（秘密鍵ではなく、
 # Google Cloud側でHTTPリファラー制限をかけた上で公開される前提のキー）。
 ARG VITE_GOOGLE_MAPS_API_KEY=""
