@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import "./study.css";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
+// TODO: 本来はログイン中のキャラクターIDなどから取得する
+const characterId = "ここにキャラクターID";
+
 export default function Study() {
   // 勉強中かどうか
   const [isStudying, setIsStudying] = useState(false);
@@ -20,7 +25,6 @@ export default function Study() {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
 
-    // 勉強を終了したらタイマーを止める
     return () => {
       window.clearInterval(timerId);
     };
@@ -33,10 +37,39 @@ export default function Study() {
   };
 
   // 勉強終了
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsStudying(false);
-    setTodayTime(formatTime(elapsedSeconds));
-    };
+
+    // 秒 → 分
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/characters/${characterId}/study`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            minutes: elapsedMinutes,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("勉強時間の登録に失敗しました");
+      }
+
+      const data = await response.json();
+
+      // APIから返ってきた勉強時間を表示
+      setTodayTime(data.total_study_time);
+    } catch (error) {
+      console.error(error);
+      setTodayTime("取得失敗");
+    }
+  };
 
   // 秒を HH:MM:SS に変換
   const formatTime = (seconds: number) => {
@@ -91,7 +124,7 @@ export default function Study() {
       )}
 
       <p className="today-time">
-        今日の勉強時間：
+        累計勉強時間：
         <span id="todayTime">{todayTime}</span>
       </p>
 

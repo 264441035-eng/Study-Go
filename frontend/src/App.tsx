@@ -20,7 +20,10 @@ export default function App() {
     </BrowserRouter>
   );
 }
+        //<Route path="/pass" element={<Pass />} />
+
 // 本番では VITE_API_URL に ALB の URL を渡す。未設定時は同一オリジンの /api を叩く。
+
 /*
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
