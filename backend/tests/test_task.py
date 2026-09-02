@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import StudyBase
+from app.models import Character, StudyBase
 from app.routers import task as task_router
 
 client = TestClient(app)
@@ -189,6 +189,53 @@ def test_send_study_time_should_rest() -> None:
 
     assert resp.status_code == 200
     assert resp.json()["should_rest"] is True
+
+
+def test_send_study_time_adds_minutes_to_demo_character(db_session) -> None:
+    """Task APIの秒数が分へ変換され、Character DBへ加算される。"""
+    client.post("/api/tasks/study/start")
+
+    response = client.post(
+        "/api/tasks/study/time",
+        json={"seconds": 125},
+    )
+
+    assert response.status_code == 200
+    characters = db_session.query(Character).all()
+    assert len(characters) == 1
+    assert characters[0].name == "Demo Character"
+    assert characters[0].total_study_minutes == 2
+    assert characters[0].effective_study_minutes == 2
+
+
+def test_send_study_time_updates_existing_character(db_session) -> None:
+    """既存のCharacterがある場合、新規作成せず同じ1体へ加算する。"""
+    character = Character(name="Existing Character")
+    db_session.add(character)
+    db_session.commit()
+
+    client.post("/api/tasks/study/start")
+    response = client.post(
+        "/api/tasks/study/time",
+        json={"seconds": 60},
+    )
+
+    assert response.status_code == 200
+    db_session.refresh(character)
+    assert db_session.query(Character).count() == 1
+    assert character.total_study_minutes == 1
+
+
+def test_send_subminute_study_time_does_not_create_character(db_session) -> None:
+    """分未満を切り捨てた結果が0分ならCharacterを更新しない。"""
+    client.post("/api/tasks/study/start")
+    response = client.post(
+        "/api/tasks/study/time",
+        json={"seconds": 30},
+    )
+
+    assert response.status_code == 200
+    assert db_session.query(Character).count() == 0
 
 
 def test_list_study_tasks_filtered_by_level() -> None:
