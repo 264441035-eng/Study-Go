@@ -53,6 +53,52 @@ body {
 
 
 /* =========================
+   拠点登録トリガーボタン
+   ========================= */
+
+.primary-button {
+    width: 100%;
+
+    margin-bottom: 15px;
+    padding: 14px;
+
+    border: none;
+    border-radius: 15px;
+
+    background-color: #9b6bd3;
+    color: white;
+
+    font-size: 17px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.primary-button:hover {
+    transform: scale(1.02);
+}
+
+.primary-button:active {
+    transform: scale(0.98);
+}
+
+
+/* =========================
+   地図クリックの案内
+   ========================= */
+
+.map-hint {
+    margin: 0 0 12px;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #9b6bd3;
+}
+
+
+/* =========================
    地図
    ========================= */
 
@@ -63,6 +109,10 @@ body {
     border-radius: 20px;
 
     background-color: #eeeeee;
+}
+
+#map.placing {
+    cursor: crosshair;
 }
 
 
@@ -79,6 +129,158 @@ body {
 }
 
 .map-message.error {
+    color: #d9534f;
+}
+
+
+/* =========================
+   拠点登録フォーム
+   ========================= */
+
+.base-form {
+    width: 100%;
+    margin-top: 30px;
+
+    padding: 20px;
+
+    border-radius: 20px;
+    background-color: #f7f5fb;
+
+    text-align: left;
+}
+
+.base-form h2 {
+    margin: 0 0 15px;
+
+    font-size: 20px;
+    text-align: center;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+
+    margin-bottom: 15px;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #555555;
+}
+
+.form-field input,
+.form-field select {
+    margin-top: 6px;
+
+    padding: 10px 12px;
+
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+
+    font-size: 16px;
+    font-weight: normal;
+    color: #333333;
+}
+
+.selected-location {
+    margin: 0 0 12px;
+
+    padding: 10px 12px;
+
+    border-radius: 10px;
+    background-color: #ffffff;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #888888;
+}
+
+.selected-location.selected {
+    color: #333333;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.form-buttons .secondary-button,
+.form-buttons .submit-button {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.secondary-button {
+    width: 100%;
+
+    margin-bottom: 12px;
+    padding: 10px;
+
+    border: 1px solid #9b6bd3;
+    border-radius: 10px;
+
+    background-color: #ffffff;
+    color: #9b6bd3;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.secondary-button:hover {
+    transform: scale(1.02);
+}
+
+.secondary-button:active {
+    transform: scale(0.98);
+}
+
+.submit-button {
+    width: 100%;
+
+    padding: 12px;
+
+    border: none;
+    border-radius: 10px;
+
+    background-color: #9b6bd3;
+    color: white;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.submit-button:hover {
+    transform: scale(1.02);
+}
+
+.submit-button:active {
+    transform: scale(0.98);
+}
+
+.submit-button:disabled,
+.secondary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.form-message {
+    min-height: 1.2em;
+    margin: 12px 0 0;
+
+    font-size: 14px;
+    color: #5cb85c;
+    text-align: center;
+}
+
+.form-message.error {
     color: #d9534f;
 }
 

@@ -27,10 +27,39 @@ interface Base {
     longitude: string;
 }
 
+interface LatLng {
+    lat: number;
+    lng: number;
+}
+
 const mapElement = document.getElementById("map") as HTMLDivElement;
 const messageElement = document.getElementById("mapMessage") as HTMLParagraphElement;
 const countElement = document.getElementById("baseCount") as HTMLSpanElement;
 const backButton = document.getElementById("backButton") as HTMLButtonElement;
+
+const startRegisterButton = document.getElementById("startRegisterButton") as HTMLButtonElement;
+const mapHintElement = document.getElementById("mapHint") as HTMLParagraphElement;
+const baseFormSection = document.getElementById("baseFormSection") as HTMLElement;
+const baseForm = document.getElementById("baseForm") as HTMLFormElement;
+const nameInput = document.getElementById("baseName") as HTMLInputElement;
+const categorySelect = document.getElementById("baseCategory") as HTMLSelectElement;
+const selectedLocationElement = document.getElementById("selectedLocation") as HTMLParagraphElement;
+const useCurrentLocationButton = document.getElementById(
+    "useCurrentLocationButton",
+) as HTMLButtonElement;
+const cancelRegisterButton = document.getElementById("cancelRegisterButton") as HTMLButtonElement;
+const formMessageElement = document.getElementById("formMessage") as HTMLParagraphElement;
+const submitButton = document.getElementById("submitButton") as HTMLButtonElement;
+
+let map: google.maps.Map | undefined;
+let baseMarkers: google.maps.Marker[] = [];
+
+// 「拠点を登録」ボタンを押してから地図をクリックするまでの間だけtrue。
+let isRegistering = false;
+
+// クリック（またはドラッグ）で選んだ「これから登録する場所」の仮ピン。
+let pendingMarker: google.maps.Marker | undefined;
+let pendingLocation: LatLng | undefined;
 
 backButton.addEventListener("click", () => {
     location.href = "index.html";
@@ -41,14 +70,22 @@ function showMessage(text: string, isError = false): void {
     messageElement.classList.toggle("error", isError);
 }
 
-async function fetchBases(): Promise<Base[]> {
+function showFormMessage(text: string, isError = false): void {
+    formMessageElement.textContent = text;
+    formMessageElement.classList.toggle("error", isError);
+}
+
+function authHeaders(): Record<string, string> {
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!token) {
         throw new Error("ログインが必要です");
     }
+    return { Authorization: `Bearer ${token}` };
+}
 
+async function fetchBases(): Promise<Base[]> {
     const response = await fetch(`${API_BASE}/api/v1/bases`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -59,6 +96,30 @@ async function fetchBases(): Promise<Base[]> {
     }
 
     return response.json();
+}
+
+async function createBase(payload: {
+    name: string;
+    category: string;
+    latitude: number;
+    longitude: number;
+}): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/v1/bases`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        throw new Error("ログインが必要です");
+    }
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.detail ?? "拠点の登録に失敗しました");
+    }
 }
 
 function createPinIcon(color: string): google.maps.Symbol {
@@ -72,7 +133,196 @@ function createPinIcon(color: string): google.maps.Symbol {
     };
 }
 
-async function initMap(): Promise<void> {
+function clearBaseMarkers(): void {
+    for (const marker of baseMarkers) {
+        marker.setMap(null);
+    }
+    baseMarkers = [];
+}
+
+function renderBases(bases: Base[]): void {
+    if (!map) {
+        return;
+    }
+
+    countElement.textContent = String(bases.length);
+    clearBaseMarkers();
+
+    const bounds = new google.maps.LatLngBounds();
+
+    for (const base of bases) {
+        const position = { lat: Number(base.latitude), lng: Number(base.longitude) };
+
+        const marker = new google.maps.Marker({
+            position,
+            map,
+            title: base.name,
+            icon: createPinIcon(CATEGORY_PIN_COLORS[base.category] ?? DEFAULT_PIN_COLOR),
+        });
+
+        baseMarkers.push(marker);
+        bounds.extend(position);
+    }
+
+    if (bases.length === 1) {
+        map.setCenter(bounds.getCenter());
+        map.setZoom(13);
+    } else if (bases.length > 1) {
+        map.fitBounds(bounds);
+    }
+
+    showMessage(bases.length === 0 ? "拠点がまだ登録されていません。" : "");
+}
+
+async function refreshBases(): Promise<void> {
+    try {
+        const bases = await fetchBases();
+        renderBases(bases);
+    } catch (error) {
+        countElement.textContent = "-";
+        showMessage(error instanceof Error ? error.message : "拠点の取得に失敗しました", true);
+    }
+}
+
+// =========================
+// 登録モード（トリガーボタン→地図クリック→ピンを指す）
+// =========================
+
+function formatLocation(location: LatLng): string {
+    return `選択した場所：${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+}
+
+function setPendingLocation(location: LatLng): void {
+    pendingLocation = location;
+    submitButton.disabled = false;
+
+    selectedLocationElement.textContent = formatLocation(location);
+    selectedLocationElement.classList.add("selected");
+
+    if (!map) {
+        return;
+    }
+
+    if (pendingMarker) {
+        pendingMarker.setPosition(location);
+    } else {
+        pendingMarker = new google.maps.Marker({
+            position: location,
+            map,
+            draggable: true,
+            animation: google.maps.Animation.DROP,
+        });
+
+        pendingMarker.addListener("dragend", () => {
+            const position = pendingMarker!.getPosition();
+            if (position) {
+                setPendingLocation({ lat: position.lat(), lng: position.lng() });
+            }
+        });
+    }
+}
+
+function clearPendingLocation(): void {
+    pendingLocation = undefined;
+    pendingMarker?.setMap(null);
+    pendingMarker = undefined;
+
+    selectedLocationElement.textContent = "場所が未選択です";
+    selectedLocationElement.classList.remove("selected");
+    submitButton.disabled = true;
+}
+
+function enterRegisterMode(): void {
+    isRegistering = true;
+
+    startRegisterButton.hidden = true;
+    mapHintElement.hidden = false;
+    baseFormSection.hidden = false;
+    mapElement.classList.add("placing");
+
+    showFormMessage("");
+}
+
+function exitRegisterMode(): void {
+    isRegistering = false;
+
+    startRegisterButton.hidden = false;
+    mapHintElement.hidden = true;
+    baseFormSection.hidden = true;
+    mapElement.classList.remove("placing");
+
+    baseForm.reset();
+    clearPendingLocation();
+    showFormMessage("");
+}
+
+function fillCurrentLocation(): void {
+    if (!navigator.geolocation) {
+        showFormMessage("この端末では現在地を取得できません。", true);
+        return;
+    }
+    if (!map) {
+        return;
+    }
+
+    useCurrentLocationButton.disabled = true;
+    showFormMessage("現在地を取得中...");
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+            setPendingLocation(location);
+            map!.setCenter(location);
+            map!.setZoom(15);
+            useCurrentLocationButton.disabled = false;
+            showFormMessage("現在地をピンにしました。");
+        },
+        () => {
+            useCurrentLocationButton.disabled = false;
+            showFormMessage("現在地の取得に失敗しました。", true);
+        },
+    );
+}
+
+async function handleSubmit(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+
+    if (!nameInput.value.trim()) {
+        showFormMessage("拠点名を入力してください。", true);
+        return;
+    }
+    if (!pendingLocation) {
+        showFormMessage("地図をクリックして場所を選んでください。", true);
+        return;
+    }
+
+    submitButton.disabled = true;
+    showFormMessage("登録中...");
+
+    try {
+        await createBase({
+            name: nameInput.value.trim(),
+            category: categorySelect.value,
+            latitude: pendingLocation.lat,
+            longitude: pendingLocation.lng,
+        });
+
+        exitRegisterMode();
+        await refreshBases();
+    } catch (error) {
+        showFormMessage(error instanceof Error ? error.message : "拠点の登録に失敗しました", true);
+        submitButton.disabled = false;
+    }
+}
+
+startRegisterButton.addEventListener("click", enterRegisterMode);
+cancelRegisterButton.addEventListener("click", exitRegisterMode);
+useCurrentLocationButton.addEventListener("click", fillCurrentLocation);
+baseForm.addEventListener("submit", (event) => {
+    void handleSubmit(event);
+});
+
+async function initPage(): Promise<void> {
     if (!GOOGLE_MAPS_API_KEY) {
         showMessage(
             "Google MapsのAPIキーが未設定です（環境変数 VITE_GOOGLE_MAPS_API_KEY）。",
@@ -81,52 +331,23 @@ async function initMap(): Promise<void> {
         return;
     }
 
-    let bases: Base[];
-    try {
-        bases = await fetchBases();
-    } catch (error) {
-        countElement.textContent = "-";
-        showMessage(error instanceof Error ? error.message : "拠点の取得に失敗しました", true);
-        return;
-    }
-
-    countElement.textContent = String(bases.length);
-
     setOptions({ key: GOOGLE_MAPS_API_KEY, v: "weekly" });
     const { Map } = await importLibrary("maps");
 
-    const center =
-        bases.length > 0
-            ? { lat: Number(bases[0].latitude), lng: Number(bases[0].longitude) }
-            : DEFAULT_CENTER;
-
-    const map = new Map(mapElement, {
-        center,
-        zoom: bases.length > 0 ? 13 : 11,
+    map = new Map(mapElement, {
+        center: DEFAULT_CENTER,
+        zoom: 11,
+        streetViewControl: false,
+        mapTypeControl: false,
     });
 
-    const bounds = new google.maps.LatLngBounds();
+    map.addListener("click", (event: google.maps.MapMouseEvent) => {
+        if (isRegistering && event.latLng) {
+            setPendingLocation({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+        }
+    });
 
-    for (const base of bases) {
-        const position = { lat: Number(base.latitude), lng: Number(base.longitude) };
-
-        new google.maps.Marker({
-            position,
-            map,
-            title: base.name,
-            icon: createPinIcon(CATEGORY_PIN_COLORS[base.category] ?? DEFAULT_PIN_COLOR),
-        });
-
-        bounds.extend(position);
-    }
-
-    if (bases.length > 1) {
-        map.fitBounds(bounds);
-    }
-
-    if (bases.length === 0) {
-        showMessage("拠点がまだ登録されていません。");
-    }
+    await refreshBases();
 }
 
-initMap();
+initPage();

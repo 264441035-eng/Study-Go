@@ -18,9 +18,58 @@
             登録した拠点：<span id="baseCount">取得中...</span>件
         </p>
 
+        <button type="button" id="startRegisterButton" class="primary-button">
+            ＋ 拠点を登録
+        </button>
+
+        <p id="mapHint" class="map-hint" hidden>地図をクリックして拠点にする場所を選んでください</p>
+
         <div id="map"></div>
 
         <p id="mapMessage" class="map-message"></p>
+
+        <section class="base-form" id="baseFormSection" hidden>
+
+            <h2>拠点を登録</h2>
+
+            <p id="selectedLocation" class="selected-location">場所が未選択です</p>
+
+            <button type="button" id="useCurrentLocationButton" class="secondary-button">
+                現在地を使う
+            </button>
+
+            <form id="baseForm">
+
+                <label class="form-field">
+                    拠点名
+                    <input type="text" id="baseName" name="name" maxlength="50" required>
+                </label>
+
+                <label class="form-field">
+                    カテゴリ
+                    <select id="baseCategory" name="category" required>
+                        <option value="library">図書館</option>
+                        <option value="school">学校</option>
+                        <option value="cram_school">塾</option>
+                        <option value="home">自宅</option>
+                    </select>
+                </label>
+
+                <div class="form-buttons">
+                    <button type="button" id="cancelRegisterButton" class="secondary-button">
+                        キャンセル
+                    </button>
+
+                    <button type="submit" class="submit-button" id="submitButton" disabled>
+                        登録する
+                    </button>
+                </div>
+
+                <p id="formMessage" class="form-message"></p>
+
+            </form>
+
+        </section>
 
         <button class="back-button" id="backButton">
             ホームに戻る
