@@ -19,6 +19,18 @@ const CATEGORY_PIN_COLORS: Record<string, string> = {
 };
 const DEFAULT_PIN_COLOR = "#d9534f";
 
+// カテゴリの表示名。
+const CATEGORY_LABELS: Record<string, string> = {
+    library: "図書館",
+    school: "学校",
+    cram_school: "塾",
+    home: "自宅",
+};
+
+// 自宅・学校は1人1件までなので、既に登録済みならプルダウンで選べなくする。
+// （バックエンドにも同じ制限があるので、ここはあくまでUX向上のための先回りチェック）
+const SINGLE_INSTANCE_CATEGORIES = new Set(["home", "school"]);
+
 interface Base {
     id: string;
     name: string;
@@ -53,6 +65,7 @@ const submitButton = document.getElementById("submitButton") as HTMLButtonElemen
 
 let map: google.maps.Map | undefined;
 let baseMarkers: google.maps.Marker[] = [];
+let infoWindow: google.maps.InfoWindow | undefined;
 
 // 「拠点を登録」ボタンを押してから地図をクリックするまでの間だけtrue。
 let isRegistering = false;
@@ -122,6 +135,61 @@ async function createBase(payload: {
     }
 }
 
+async function deleteBase(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/v1/bases/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        throw new Error("ログインが必要です");
+    }
+    if (!response.ok && response.status !== 204) {
+        throw new Error("拠点の削除に失敗しました");
+    }
+}
+
+async function handleDeleteBase(base: Base): Promise<void> {
+    if (!window.confirm(`「${base.name}」を削除しますか？`)) {
+        return;
+    }
+
+    infoWindow?.close();
+
+    try {
+        await deleteBase(base.id);
+        await refreshBases();
+    } catch (error) {
+        showMessage(error instanceof Error ? error.message : "拠点の削除に失敗しました", true);
+    }
+}
+
+function buildInfoWindowContent(base: Base): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "base-info-window";
+
+    const title = document.createElement("p");
+    title.className = "base-info-title";
+    title.textContent = base.name;
+    container.appendChild(title);
+
+    const category = document.createElement("p");
+    category.className = "base-info-category";
+    category.textContent = CATEGORY_LABELS[base.category] ?? base.category;
+    container.appendChild(category);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "base-info-delete-button";
+    deleteButton.textContent = "削除する";
+    deleteButton.addEventListener("click", () => {
+        void handleDeleteBase(base);
+    });
+    container.appendChild(deleteButton);
+
+    return container;
+}
+
 function createPinIcon(color: string): google.maps.Symbol {
     return {
         path: google.maps.SymbolPath.CIRCLE,
@@ -134,10 +202,33 @@ function createPinIcon(color: string): google.maps.Symbol {
 }
 
 function clearBaseMarkers(): void {
+    infoWindow?.close();
+
     for (const marker of baseMarkers) {
         marker.setMap(null);
     }
     baseMarkers = [];
+}
+
+function updateCategoryOptions(bases: Base[]): void {
+    const usedSingleCategories = new Set(
+        bases.map((base) => base.category).filter((category) => SINGLE_INSTANCE_CATEGORIES.has(category)),
+    );
+
+    for (const option of Array.from(categorySelect.options)) {
+        const isUsed = usedSingleCategories.has(option.value);
+        option.disabled = isUsed;
+        option.textContent = isUsed
+            ? `${CATEGORY_LABELS[option.value]}（登録済み）`
+            : CATEGORY_LABELS[option.value];
+    }
+
+    if (categorySelect.selectedOptions[0]?.disabled) {
+        const firstEnabled = Array.from(categorySelect.options).find((option) => !option.disabled);
+        if (firstEnabled) {
+            categorySelect.value = firstEnabled.value;
+        }
+    }
 }
 
 function renderBases(bases: Base[]): void {
@@ -146,6 +237,7 @@ function renderBases(bases: Base[]): void {
     }
 
     countElement.textContent = String(bases.length);
+    updateCategoryOptions(bases);
     clearBaseMarkers();
 
     const bounds = new google.maps.LatLngBounds();
@@ -158,6 +250,14 @@ function renderBases(bases: Base[]): void {
             map,
             title: base.name,
             icon: createPinIcon(CATEGORY_PIN_COLORS[base.category] ?? DEFAULT_PIN_COLOR),
+        });
+
+        marker.addListener("click", () => {
+            if (!infoWindow) {
+                infoWindow = new google.maps.InfoWindow();
+            }
+            infoWindow.setContent(buildInfoWindowContent(base));
+            infoWindow.open({ map, anchor: marker });
         });
 
         baseMarkers.push(marker);

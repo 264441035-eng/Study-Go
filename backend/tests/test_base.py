@@ -159,6 +159,51 @@ def test_create_base_invalid_coordinates(client, db_session, overrides) -> None:
     assert resp.status_code == 400
 
 
+@pytest.mark.parametrize("category", ["home", "school"])
+def test_home_and_school_limited_to_one(client, db_session, category) -> None:
+    _, token = _create_user_and_token(db_session)
+
+    resp = client.post(
+        "/api/v1/bases", json=_valid_payload(category=category), headers=_auth_headers(token)
+    )
+    assert resp.status_code == 201
+
+    resp = client.post(
+        "/api/v1/bases",
+        json=_valid_payload(category=category, name="Second"),
+        headers=_auth_headers(token),
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.parametrize("category", ["library", "cram_school"])
+def test_library_and_cram_school_allow_multiple(client, db_session, category) -> None:
+    _, token = _create_user_and_token(db_session)
+
+    for i in range(3):
+        resp = client.post(
+            "/api/v1/bases",
+            json=_valid_payload(category=category, name=f"Base {i}"),
+            headers=_auth_headers(token),
+        )
+        assert resp.status_code == 201
+
+
+def test_home_limit_is_per_user(client, db_session) -> None:
+    _, token_a = _create_user_and_token(db_session)
+    _, token_b = _create_user_and_token(db_session)
+
+    resp = client.post(
+        "/api/v1/bases", json=_valid_payload(category="home"), headers=_auth_headers(token_a)
+    )
+    assert resp.status_code == 201
+
+    resp = client.post(
+        "/api/v1/bases", json=_valid_payload(category="home"), headers=_auth_headers(token_b)
+    )
+    assert resp.status_code == 201
+
+
 def test_cannot_access_other_users_base(client, db_session) -> None:
     _, token_a = _create_user_and_token(db_session)
     _, token_b = _create_user_and_token(db_session)

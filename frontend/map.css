@@ -134,6 +134,50 @@ body {
 
 
 /* =========================
+   ピンをクリックした時の吹き出し
+   ========================= */
+
+.base-info-window {
+    padding: 4px 2px;
+    text-align: left;
+}
+
+.base-info-title {
+    margin: 0;
+
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.base-info-category {
+    margin: 4px 0 10px;
+
+    font-size: 13px;
+    color: #888888;
+}
+
+.base-info-delete-button {
+    padding: 6px 14px;
+
+    border: 1px solid #d9534f;
+    border-radius: 8px;
+
+    background-color: #ffffff;
+    color: #d9534f;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.base-info-delete-button:hover {
+    background-color: #d9534f;
+    color: #ffffff;
+}
+
+
+/* =========================
    拠点登録フォーム
    ========================= */
 

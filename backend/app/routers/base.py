@@ -16,7 +16,14 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import StudyBase, User
-from app.schemas import BASE_CATEGORIES, BaseCountOut, BaseCreate, BaseOut
+from app.schemas import (
+    BASE_CATEGORIES,
+    BASE_CATEGORY_LABELS,
+    SINGLE_INSTANCE_CATEGORIES,
+    BaseCountOut,
+    BaseCreate,
+    BaseOut,
+)
 
 router = APIRouter(prefix="/api/v1/bases", tags=["base"])
 
@@ -39,6 +46,24 @@ def _validate_base_input(payload: BaseCreate) -> None:
         )
 
 
+def _ensure_category_capacity(db: Session, user_id: UUID, category: str) -> None:
+    if category not in SINGLE_INSTANCE_CATEGORIES:
+        return
+
+    already_exists = (
+        db.query(StudyBase)
+        .filter(StudyBase.user_id == user_id, StudyBase.category == category)
+        .first()
+        is not None
+    )
+    if already_exists:
+        label = BASE_CATEGORY_LABELS[category]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{label}は既に登録されています（1件まで）。削除してから登録し直してください",
+        )
+
+
 def _get_owned_base_or_404(db: Session, base_id: UUID, user_id: UUID) -> StudyBase:
     base = (
         db.query(StudyBase)
@@ -58,6 +83,7 @@ def create_base(
 ) -> StudyBase:
     """拠点登録API。"""
     _validate_base_input(payload)
+    _ensure_category_capacity(db, current_user.id, payload.category)
 
     base = StudyBase(
         user_id=current_user.id,
