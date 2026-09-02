@@ -77,6 +77,10 @@ let isRegistering = false;
 let pendingMarker: google.maps.Marker | undefined;
 let pendingLocation: LatLng | undefined;
 
+// 勉強終了画面から遷移してきたときだけ入る、その場で記録済みの勉強秒数。
+// 拠点登録が成功したら、その拠点へ加算してクリアする。
+let pendingStudySeconds: number | null = null;
+
 backButton.addEventListener("click", () => {
     location.href = "index.html";
 });
@@ -106,7 +110,7 @@ async function createBase(payload: {
     category: string;
     latitude: number;
     longitude: number;
-}): Promise<void> {
+}): Promise<Base> {
     const response = await fetch(`${API_BASE}/api/v1/bases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,6 +121,17 @@ async function createBase(payload: {
         const body = await response.json().catch(() => null);
         throw new Error(body?.detail ?? "拠点の登録に失敗しました");
     }
+
+    return response.json();
+}
+
+// 拠点作成直後、直前の勉強セッション分をその拠点へ加算する（失敗しても登録自体は成功扱い）。
+async function addStudyTimeToBase(baseId: string, seconds: number): Promise<void> {
+    await fetch(`${API_BASE}/api/v1/bases/${baseId}/study-time`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds }),
+    });
 }
 
 async function deleteBase(id: string): Promise<void> {
@@ -517,12 +532,18 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
     showFormMessage("登録中...");
 
     try {
-        await createBase({
+        const base = await createBase({
             name: nameInput.value.trim(),
             category: categorySelect.value,
             latitude: pendingLocation.lat,
             longitude: pendingLocation.lng,
         });
+
+        // 勉強終了直後の登録なら、その場の勉強時間をそのまま新しい拠点に加算する。
+        if (pendingStudySeconds !== null) {
+            await addStudyTimeToBase(base.id, pendingStudySeconds);
+            pendingStudySeconds = null;
+        }
 
         exitRegisterMode();
         await refreshBases();
@@ -546,6 +567,9 @@ function applyPendingLocationFromQuery(): void {
     if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
         return;
     }
+
+    const paramSeconds = Number(params.get("seconds"));
+    pendingStudySeconds = Number.isFinite(paramSeconds) && paramSeconds > 0 ? paramSeconds : null;
 
     enterRegisterMode();
     setPendingLocation(location);
