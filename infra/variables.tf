@@ -66,6 +66,44 @@ variable "frontend_memory" {
   default = 512
 }
 
+variable "ai_tutor_cpu" {
+  type    = number
+  default = 256
+}
+
+variable "ai_tutor_memory" {
+  type    = number
+  default = 512
+}
+
+variable "ai_tutor_app_env" {
+  description = "AI Tutor の APP_ENV。local 以外にすると /dev/token が無効化される"
+  type        = string
+  default     = "production"
+}
+
+variable "ai_tutor_conversation_model_id" {
+  description = "会話用モデル (Bedrock jp.* Inference Profile)"
+  type        = string
+  default     = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
+variable "ai_tutor_assessment_model_id" {
+  description = "評価用モデル (Bedrock jp.* Inference Profile)"
+  type        = string
+  default     = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
+}
+
+variable "ai_tutor_sessions_table" {
+  type    = string
+  default = "ai-tutor-sessions"
+}
+
+variable "ai_tutor_student_models_table" {
+  type    = string
+  default = "ai-tutor-student-models"
+}
+
 variable "github_repo" {
   description = "OIDC を許可する GitHub リポジトリ (owner/repo)"
   type        = string
