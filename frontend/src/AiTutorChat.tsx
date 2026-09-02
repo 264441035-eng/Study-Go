@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   fetchDevToken,
   finishSession,
+  getTokenFromUrl,
   sendMessage,
   startSession,
   type ConversationState,
@@ -34,7 +35,17 @@ export default function AiTutorChat() {
     setError(null);
     setLoading(true);
     try {
-      const t = await fetchDevToken();
+      // 配布 URL のトークンを優先。無い場合のみ local のデモ発行にフォールバック。
+      let t = getTokenFromUrl();
+      if (!t) {
+        try {
+          t = await fetchDevToken();
+        } catch {
+          throw new Error(
+            "アクセストークンが必要です。配布された URL（?token=… 付き）から開いてください。",
+          );
+        }
+      }
       const s = await startSession(t);
       setToken(t);
       setSessionId(s.session_id);

@@ -39,8 +39,17 @@ async function post<T>(path: string, token: string | null, body?: unknown): Prom
   return (await res.json()) as T;
 }
 
-// 本番では既存 Backend の /login が発行する JWT を使う。
-// ここでは local 専用のデモ用トークン払い出しを叩く。
+// 配布された URL からアクセストークンを取り出す。
+// ハッシュルーティングのため #/chat?token=... と ?token=...#/chat の両方に対応。
+export function getTokenFromUrl(): string | null {
+  const hashQuery = window.location.hash.split("?")[1] ?? "";
+  const fromHash = new URLSearchParams(hashQuery).get("token");
+  const fromSearch = new URLSearchParams(window.location.search).get("token");
+  return fromHash ?? fromSearch;
+}
+
+// 本番では配布トークン (getTokenFromUrl) を使う。
+// ここでは local 専用のデモ用トークン払い出しを叩く (APP_ENV=local のみ有効)。
 export async function fetchDevToken(userId = "demo-student"): Promise<string> {
   const data = await post<{ token: string }>("/dev/token", null, { user_id: userId });
   return data.token;
