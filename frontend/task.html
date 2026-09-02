@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク</title>
+    <link rel="stylesheet" href="./task.css">
+</head>
+
+<body>
+
+    <main class="task-page">
+
+        <!-- ヘッダー -->
+        <header class="task-header">
+            <button id="back-button" class="back-button">←</button>
+            <h1>タスク</h1>
+        </header>
+
+        <!-- 勉強 / 運動 タブ -->
+        <div class="tabs">
+            <button id="study-tab" class="tab active">
+                勉強
+            </button>
+
+            <button id="exercise-tab" class="tab">
+                運動
+            </button>
+        </div>
+
+        <!-- 達成状況 -->
+        <section class="progress-section">
+            <div class="progress-header">
+                <h2 id="category-title">今日の勉強</h2>
+                <span id="progress-text">0 / 3</span>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </section>
+
+        <!-- タスク一覧 -->
+        <section class="task-list-section">
+            <div id="task-list" class="task-list">
+                <!-- TypeScriptでタスクを表示 -->
+            </div>
+        </section>
+        <button id="back-button" class="back-button">←</button>
+
+    </main>
+
+    <script type="module" src="./task.ts"></script>
+
+</body>
+</html>

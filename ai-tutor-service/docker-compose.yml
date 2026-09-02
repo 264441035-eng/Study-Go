@@ -1,0 +1,40 @@
+# AI Tutor Service + DynamoDB Local (計画 §6 step 15)。
+#
+#   docker compose up                 # LLM_MODE=mock (課金なし・外部依存なし)
+#   LLM_MODE=bedrock docker compose up # 実 Bedrock (要 AWS 認証情報)
+#
+# Bedrock を使う場合はホストの ~/.aws を読み取り専用でマウントし、
+# AWS_PROFILE を渡す (SSO キャッシュもそのまま使える)。
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    # 名前付きボリュームは root 所有で作られ、既定ユーザ(uid 1000)では
+    # DB ファイルを開けない (unable to open database file)。ローカル開発用途
+    # なので root で動かして永続化する。
+    user: root
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/data"]
+    volumes:
+      - dynamodb-data:/data
+    ports:
+      - "8001:8000"
+
+  ai-tutor:
+    build: .
+    depends_on:
+      - dynamodb-local
+    environment:
+      APP_ENV: local
+      LLM_MODE: ${LLM_MODE:-mock}
+      DATABASE_MODE: local
+      DYNAMODB_ENDPOINT_URL: http://dynamodb-local:8000
+      BEDROCK_REGION: ${BEDROCK_REGION:-ap-northeast-1}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-1}
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+    ports:
+      - "8000:8000"
+
+volumes:
+  dynamodb-data:

@@ -1,12 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Study-Go</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ホーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="home">
+
+        <!-- レベル -->
+        <h1>Lv. <span id="level">レベルを取得</span></h1>
+
+        <!-- 今日の勉強時間 -->
+        <p class="study-time">
+            今日の勉強時間：<span id="studyTime">勉強時間を取得</span>
+        </p>
+
+        <!-- キャラの状態など -->
+        <p class="status">仮置き</p>
+
+        <!-- キャラクター -->
+        <div class="character">
+            <img src="images/deformed.png" alt="キャラクター">
+        </div>
+
+        <!-- 勉強ボタン -->
+        <button class="study-button" onclick="location.href='study.html'">
+            <img src="images/study.png" alt="">
+            <span>勉強</span>
+        </button>
+
+        <!-- 下の4つのボタン -->
+        <div class="menu-buttons">
+
+            <button class="menu-button chat-button"
+                    onclick="location.href='chat.html'">
+                <img src="images/chat.png" alt="">
+                <span>チャット</span>
+            </button>
+
+            <button class="menu-button map-button"
+                    onclick="location.href='map.html'">
+                <img src="images/map.png" alt="">
+                <span>マップ</span>
+            </button>
+
+            <button class="menu-button task-button"
+                    onclick="location.href='task.html'">
+                <img src="images/task.png" alt="">
+                <span>タスク</span>
+            </button>
+
+            <button class="menu-button pass-button"
+                    onclick="location.href='pass.html'">
+                <img src="images/pass.png" alt="">
+                <span>すれちがい</span>
+            </button>
+
+        </div>
+
+    </main>
+
+</body>
 </html>
