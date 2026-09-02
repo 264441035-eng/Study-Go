@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from functools import lru_cache
 
-from sqlalchemy import Date, DateTime, Integer, Numeric, String, Uuid, func
+from sqlalchemy import Boolean, Date, DateTime, Integer, Numeric, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -154,3 +154,21 @@ class Character(Base):
     )
     # この日まで未学習ペナルティを適用済みであることを表す日付。
     penalty_applied_through: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+class TodoItem(Base):
+    """勉強・運動タスクの学習用シンプルテーブル。
+
+    名称・カテゴリ（勉強/運動）・達成済みかどうかの3項目を保持する。
+    他機能（task, character, base）と同様にログイン機能を持たないため、
+    ユーザーに紐付かないグローバルなデータとして扱う。
+    """
+
+    __tablename__ = "todo_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    category: Mapped[str] = mapped_column(String(20), nullable=False)
+    done: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+

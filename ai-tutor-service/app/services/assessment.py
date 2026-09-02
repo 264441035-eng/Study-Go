@@ -79,6 +79,7 @@ class AssessmentService:
             messages=[Message(role=m.role.value, content=m.content) for m in history],
             schema=build_assessment_schema(subject),
             model_id=self.settings.assessment_model_id or None,
+            max_tokens=self.settings.assessment_max_tokens,
         )
 
         topic = taxonomy.normalize_topic(subject, raw.get("topic", taxonomy.OTHER))

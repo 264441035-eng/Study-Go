@@ -67,6 +67,7 @@ class ConversationService:
             system=SYSTEM_PROMPT,
             messages=[],
             model_id=self._model_id(),
+            max_tokens=self.settings.conversation_max_tokens,
         )
 
     def next_message(
@@ -108,6 +109,7 @@ class ConversationService:
             system=system_prompt,
             messages=self._to_llm(history),
             model_id=self._model_id(),
+            max_tokens=self.settings.conversation_max_tokens,
         )
 
         state = (

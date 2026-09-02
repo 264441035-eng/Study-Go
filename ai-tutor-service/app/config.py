@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     conversation_model_id: str = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
     assessment_model_id: str = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
+    # モデルが空応答/途中で切れるのを防ぐための出力上限 (トークン数)。
+    # 会話は短め、評価(構造化出力)はフィールド数が多いため長めに確保する。
+    conversation_max_tokens: int = 1024
+    assessment_max_tokens: int = 2048
+
     # --- 認証 (JWT HS256, 既存backendと共有シークレット; 計画 §1-①) ---
     jwt_secret: str = "dev-insecure-secret-change-me"
     jwt_algorithm: str = "HS256"

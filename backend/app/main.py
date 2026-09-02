@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, base, character, chat, encounter, task
+from app.routers import auth, base, character, chat, encounter, task, todo
 
 app = FastAPI(title="Study-Go API")
 
@@ -40,5 +40,6 @@ app.include_router(character.router)
 app.include_router(chat.router)
 app.include_router(encounter.router)
 app.include_router(task.router)
+app.include_router(todo.router)
 
 

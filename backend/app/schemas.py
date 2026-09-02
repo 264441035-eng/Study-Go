@@ -6,6 +6,38 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+TODO_CATEGORIES = ("study", "exercise")
+
+TODO_CATEGORY_LABELS = {
+    "study": "勉強",
+    "exercise": "運動",
+}
+
+
+class TodoCreate(BaseModel):
+    """項目作成時の入力。"""
+
+    name: str = Field(min_length=1, max_length=50, description="項目の名称")
+    category: str = Field(description="'study'（勉強）または 'exercise'（運動）")
+    done: bool = Field(default=False, description="作成時点で達成済みかどうか")
+
+
+class TodoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    category: str
+    done: bool
+    created_at: datetime
+
+
+class TodoStatusUpdate(BaseModel):
+    """達成状況の更新。"""
+
+    done: bool = Field(description="達成済みにするかどうか")
+
+
 BASE_CATEGORIES = ("library", "school", "cram_school", "home")
 
 # 自宅・学校は現実的に1つしかないはずなので、アプリ全体で1件までに制限する
