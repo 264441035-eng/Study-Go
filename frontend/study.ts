@@ -71,13 +71,19 @@ async function startStudy(): Promise<void> {
     startButton.style.display = "none";
     stopButton.style.display = "block";
 
+    // 発表デモ用: 実時間1秒で1分(60秒)経過したことにする。
+    // 秒も動いて見えるよう、間隔を60倍速くしつつ経過時間も60倍で計算する。
+    const DEMO_SPEED_MULTIPLIER = 60;
+
     timerInterval = window.setInterval(() => {
         if (startTime === null) {
             return;
         }
-        elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        elapsedSeconds = Math.floor(
+            ((Date.now() - startTime) * DEMO_SPEED_MULTIPLIER) / 1000,
+        );
         timer.textContent = formatTime(elapsedSeconds);
-    }, 1000);
+    }, 1000 / DEMO_SPEED_MULTIPLIER);
 }
 
 
