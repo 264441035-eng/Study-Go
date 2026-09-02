@@ -1,9 +1,42 @@
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.database import Base, get_db
 from app.main import app
+from app.models import StudyBase
 from app.routers import task as task_router
 
 client = TestClient(app)
+
+
+@pytest.fixture()
+def db_session():
+    """拠点との連携をテストするためのDB（SQLite）を用意し、get_dbを差し替える。"""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        app.dependency_overrides.clear()
 
 
 def setup_function() -> None:
@@ -184,3 +217,75 @@ def test_list_exercise_tasks_filtered_by_level() -> None:
 
     assert all(task["required_level"] <= 1 for task in body)
     assert not any(task["id"] == 103 for task in body)
+
+
+# =========================================================
+# 位置情報による拠点への勉強時間の紐付け
+# =========================================================
+
+
+def _create_base(db_session, **overrides) -> StudyBase:
+    base = StudyBase(
+        name=overrides.get("name", "Test Base"),
+        category=overrides.get("category", "library"),
+        latitude=overrides.get("latitude", 35.681236),
+        longitude=overrides.get("longitude", 139.767125),
+    )
+    db_session.add(base)
+    db_session.commit()
+    db_session.refresh(base)
+    return base
+
+
+def test_send_study_time_credits_nearby_base(db_session) -> None:
+    base = _create_base(db_session)
+
+    client.post("/api/tasks/study/start")
+
+    resp = client.post(
+        "/api/tasks/study/time",
+        json={
+            "seconds": 1800,
+            "latitude": 35.681300,
+            "longitude": 139.767200,
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["matched_base_id"] == str(base.id)
+    assert body["base_level"] == 1
+    assert body["base_leveled_up"] is False
+
+
+def test_send_study_time_ignores_far_away_base(db_session) -> None:
+    _create_base(db_session)
+
+    client.post("/api/tasks/study/start")
+
+    resp = client.post(
+        "/api/tasks/study/time",
+        json={
+            "seconds": 1800,
+            # 遠く離れた座標（大阪付近）なので拠点にはマッチしない
+            "latitude": 34.693725,
+            "longitude": 135.502254,
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["matched_base_id"] is None
+
+
+def test_send_study_time_without_location_does_not_credit_base(db_session) -> None:
+    _create_base(db_session)
+
+    client.post("/api/tasks/study/start")
+
+    resp = client.post(
+        "/api/tasks/study/time",
+        json={"seconds": 1800},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["matched_base_id"] is None

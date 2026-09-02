@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 BASE_CATEGORIES = ("library", "school", "cram_school", "home")
 
-# 自宅・学校は現実的に1人1件しかないはずなので、1ユーザーにつき1件までに制限する。
+# 自宅・学校は現実的に1つしかないはずなので、アプリ全体で1件までに制限する
+# （ログイン機能が無く拠点はユーザーに紐付かないグローバルなデータのため）。
 # 図書館・塾は複数拠点があり得るため無制限。
 SINGLE_INSTANCE_CATEGORIES = ("school", "home")
 
@@ -31,11 +32,12 @@ class BaseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    user_id: UUID
     name: str
     category: str
     latitude: Decimal
     longitude: Decimal
+    total_study_seconds: int
+    level: int
     created_at: datetime
 
 
@@ -43,6 +45,12 @@ class BaseCountOut(BaseModel):
     count: int
 
 
+class StudyTimeAdd(BaseModel):
+    seconds: int = Field(gt=0)
+
+
+class StudyTimeAddOut(BaseOut):
+    leveled_up: bool
 class CharacterCreate(BaseModel):
     """キャラクター作成時の入力。育成状態はサーバー側で決定する。"""
 

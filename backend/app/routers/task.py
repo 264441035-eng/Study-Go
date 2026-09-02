@@ -6,15 +6,20 @@ main.py で `app.include_router(...)` を1行追加するだけで良い。
 """
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from enum import Enum
+from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.routers.base import credit_study_time_by_location
 
 JST = timezone(timedelta(hours=9))
 
 router = APIRouter(prefix="/api/tasks", tags=["task"])
-
 
 
 # =========================================================
@@ -90,6 +95,11 @@ class StudyTimeRequest(BaseModel):
     # 秒単位で受け取る
     seconds: int = Field(gt=0, le=86400)
 
+    # 勉強終了時点の位置情報（任意）。ログイン中かつこれが送られてきた場合、
+    # 最も近い自分の拠点（BASE_MATCH_RADIUS_METERS以内）に勉強時間を加算する。
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
+
 
 class StudyRecord(BaseModel):
     seconds: int
@@ -112,6 +122,11 @@ class StudyTimeSendResponse(BaseModel):
     today_minutes: float
     auto_completed_task_ids: list[int]
     should_rest: bool
+
+    # 位置情報から拠点を特定できた場合のみ入る。
+    matched_base_id: UUID | None = None
+    base_level: int | None = None
+    base_leveled_up: bool = False
 
 
 # =========================================================
@@ -348,8 +363,13 @@ def start_study() -> StudyStartResponse:
 )
 def send_study_time(
     request: StudyTimeRequest,
+    db: Session = Depends(get_db),
 ) -> StudyTimeSendResponse:
-    """1回の勉強時間を保存する。"""
+    """1回の勉強時間を保存する。
+
+    位置情報が送られてきた場合は、最寄りの拠点に勉強時間を加算して
+    拠点レベルも更新する。位置情報なしでも今まで通りタスクの自動達成判定は行う。
+    """
 
     global _study_started_at
 
@@ -377,12 +397,28 @@ def send_study_time(
     # 50分以上連続で勉強したら休憩を提案
     should_rest = request.seconds >= 50 * 60
 
+    matched_base_id: UUID | None = None
+    base_level: int | None = None
+    base_leveled_up = False
+
+    if request.latitude is not None and request.longitude is not None:
+        credited = credit_study_time_by_location(
+            db, request.latitude, request.longitude, request.seconds
+        )
+        if credited is not None:
+            base, base_leveled_up = credited
+            matched_base_id = base.id
+            base_level = base.level
+
     return StudyTimeSendResponse(
         session_seconds=request.seconds,
         today_seconds=total_seconds,
         today_minutes=round(total_seconds / 60, 1),
         auto_completed_task_ids=completed_ids,
         should_rest=should_rest,
+        matched_base_id=matched_base_id,
+        base_level=base_level,
+        base_leveled_up=base_leveled_up,
     )
 
 

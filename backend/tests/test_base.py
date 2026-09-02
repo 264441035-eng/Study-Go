@@ -1,6 +1,3 @@
-import uuid
-
-import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,9 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
-from app.dependencies import JWT_ALGORITHM, JWT_SECRET_KEY
 from app.main import app
-from app.models import User
 
 
 @pytest.fixture()
@@ -44,20 +39,6 @@ def client(db_session):
     return TestClient(app)
 
 
-def _create_user_and_token(db_session) -> tuple[User, str]:
-    user = User(email=f"{uuid.uuid4()}@example.com")
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-
-    token = jwt.encode({"sub": str(user.id)}, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-    return user, token
-
-
-def _auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def _valid_payload(**overrides) -> dict:
     payload = {
         "name": "Local Library",
@@ -69,10 +50,8 @@ def _valid_payload(**overrides) -> dict:
     return payload
 
 
-def test_create_and_list_base(client, db_session) -> None:
-    _, token = _create_user_and_token(db_session)
-
-    resp = client.post("/api/v1/bases", json=_valid_payload(), headers=_auth_headers(token))
+def test_create_and_list_base(client) -> None:
+    resp = client.post("/api/v1/bases", json=_valid_payload())
     assert resp.status_code == 201
     body = resp.json()
     assert body["name"] == "Local Library"
@@ -80,64 +59,47 @@ def test_create_and_list_base(client, db_session) -> None:
     assert "id" in body
     assert "latitude" in body and "longitude" in body
 
-    resp = client.get("/api/v1/bases", headers=_auth_headers(token))
+    resp = client.get("/api/v1/bases")
     assert resp.status_code == 200
     assert any(b["id"] == body["id"] for b in resp.json())
 
 
-def test_get_and_delete_own_base(client, db_session) -> None:
-    _, token = _create_user_and_token(db_session)
-    created = client.post(
-        "/api/v1/bases", json=_valid_payload(), headers=_auth_headers(token)
-    ).json()
+def test_get_and_delete_base(client) -> None:
+    created = client.post("/api/v1/bases", json=_valid_payload()).json()
 
-    resp = client.get(f"/api/v1/bases/{created['id']}", headers=_auth_headers(token))
+    resp = client.get(f"/api/v1/bases/{created['id']}")
     assert resp.status_code == 200
 
-    resp = client.delete(f"/api/v1/bases/{created['id']}", headers=_auth_headers(token))
+    resp = client.delete(f"/api/v1/bases/{created['id']}")
     assert resp.status_code == 204
 
-    resp = client.get(f"/api/v1/bases/{created['id']}", headers=_auth_headers(token))
+    resp = client.get(f"/api/v1/bases/{created['id']}")
     assert resp.status_code == 404
 
 
-def test_count_bases(client, db_session) -> None:
-    _, token = _create_user_and_token(db_session)
+def test_get_and_delete_missing_base_returns_404(client) -> None:
+    resp = client.get("/api/v1/bases/00000000-0000-0000-0000-000000000000")
+    assert resp.status_code == 404
 
-    resp = client.get("/api/v1/bases/count", headers=_auth_headers(token))
+    resp = client.delete("/api/v1/bases/00000000-0000-0000-0000-000000000000")
+    assert resp.status_code == 404
+
+
+def test_count_bases(client) -> None:
+    resp = client.get("/api/v1/bases/count")
     assert resp.status_code == 200
     assert resp.json() == {"count": 0}
 
-    client.post("/api/v1/bases", json=_valid_payload(), headers=_auth_headers(token))
-    client.post(
-        "/api/v1/bases",
-        json=_valid_payload(name="School", category="school"),
-        headers=_auth_headers(token),
-    )
+    client.post("/api/v1/bases", json=_valid_payload())
+    client.post("/api/v1/bases", json=_valid_payload(name="School", category="school"))
 
-    resp = client.get("/api/v1/bases/count", headers=_auth_headers(token))
+    resp = client.get("/api/v1/bases/count")
     assert resp.status_code == 200
     assert resp.json() == {"count": 2}
 
 
-def test_count_bases_only_counts_own(client, db_session) -> None:
-    _, token_a = _create_user_and_token(db_session)
-    _, token_b = _create_user_and_token(db_session)
-
-    client.post("/api/v1/bases", json=_valid_payload(), headers=_auth_headers(token_a))
-
-    resp = client.get("/api/v1/bases/count", headers=_auth_headers(token_b))
-    assert resp.json() == {"count": 0}
-
-
-def test_create_base_invalid_category(client, db_session) -> None:
-    _, token = _create_user_and_token(db_session)
-
-    resp = client.post(
-        "/api/v1/bases",
-        json=_valid_payload(category="cafe"),
-        headers=_auth_headers(token),
-    )
+def test_create_base_invalid_category(client) -> None:
+    resp = client.post("/api/v1/bases", json=_valid_payload(category="cafe"))
     assert resp.status_code == 400
 
 
@@ -150,75 +112,71 @@ def test_create_base_invalid_category(client, db_session) -> None:
         {"longitude": -181},
     ],
 )
-def test_create_base_invalid_coordinates(client, db_session, overrides) -> None:
-    _, token = _create_user_and_token(db_session)
-
-    resp = client.post(
-        "/api/v1/bases", json=_valid_payload(**overrides), headers=_auth_headers(token)
-    )
+def test_create_base_invalid_coordinates(client, overrides) -> None:
+    resp = client.post("/api/v1/bases", json=_valid_payload(**overrides))
     assert resp.status_code == 400
 
 
 @pytest.mark.parametrize("category", ["home", "school"])
-def test_home_and_school_limited_to_one(client, db_session, category) -> None:
-    _, token = _create_user_and_token(db_session)
-
-    resp = client.post(
-        "/api/v1/bases", json=_valid_payload(category=category), headers=_auth_headers(token)
-    )
+def test_home_and_school_limited_to_one(client, category) -> None:
+    resp = client.post("/api/v1/bases", json=_valid_payload(category=category))
     assert resp.status_code == 201
 
     resp = client.post(
-        "/api/v1/bases",
-        json=_valid_payload(category=category, name="Second"),
-        headers=_auth_headers(token),
+        "/api/v1/bases", json=_valid_payload(category=category, name="Second")
     )
     assert resp.status_code == 400
 
 
 @pytest.mark.parametrize("category", ["library", "cram_school"])
-def test_library_and_cram_school_allow_multiple(client, db_session, category) -> None:
-    _, token = _create_user_and_token(db_session)
-
+def test_library_and_cram_school_allow_multiple(client, category) -> None:
     for i in range(3):
         resp = client.post(
-            "/api/v1/bases",
-            json=_valid_payload(category=category, name=f"Base {i}"),
-            headers=_auth_headers(token),
+            "/api/v1/bases", json=_valid_payload(category=category, name=f"Base {i}")
         )
         assert resp.status_code == 201
 
 
-def test_home_limit_is_per_user(client, db_session) -> None:
-    _, token_a = _create_user_and_token(db_session)
-    _, token_b = _create_user_and_token(db_session)
+def test_create_base_starts_at_level_one(client) -> None:
+    resp = client.post("/api/v1/bases", json=_valid_payload())
+    body = resp.json()
+    assert body["total_study_seconds"] == 0
+    assert body["level"] == 1
+
+
+def test_add_study_time_accumulates_and_levels_up(client) -> None:
+    created = client.post("/api/v1/bases", json=_valid_payload()).json()
 
     resp = client.post(
-        "/api/v1/bases", json=_valid_payload(category="home"), headers=_auth_headers(token_a)
+        f"/api/v1/bases/{created['id']}/study-time", json={"seconds": 1800}
     )
-    assert resp.status_code == 201
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_study_seconds"] == 1800
+    assert body["level"] == 1
+    assert body["leveled_up"] is False
 
     resp = client.post(
-        "/api/v1/bases", json=_valid_payload(category="home"), headers=_auth_headers(token_b)
+        f"/api/v1/bases/{created['id']}/study-time", json={"seconds": 1800}
     )
-    assert resp.status_code == 201
+    body = resp.json()
+    assert body["total_study_seconds"] == 3600
+    assert body["level"] == 2
+    assert body["leveled_up"] is True
 
 
-def test_cannot_access_other_users_base(client, db_session) -> None:
-    _, token_a = _create_user_and_token(db_session)
-    _, token_b = _create_user_and_token(db_session)
+def test_add_study_time_rejects_non_positive_seconds(client) -> None:
+    created = client.post("/api/v1/bases", json=_valid_payload()).json()
 
-    created = client.post(
-        "/api/v1/bases", json=_valid_payload(), headers=_auth_headers(token_a)
-    ).json()
+    resp = client.post(
+        f"/api/v1/bases/{created['id']}/study-time", json={"seconds": 0}
+    )
+    assert resp.status_code == 422
 
-    resp = client.get(f"/api/v1/bases/{created['id']}", headers=_auth_headers(token_b))
+
+def test_add_study_time_for_missing_base_returns_404(client) -> None:
+    resp = client.post(
+        "/api/v1/bases/00000000-0000-0000-0000-000000000000/study-time",
+        json={"seconds": 600},
+    )
     assert resp.status_code == 404
-
-    resp = client.delete(f"/api/v1/bases/{created['id']}", headers=_auth_headers(token_b))
-    assert resp.status_code == 404
-
-
-def test_requires_authentication(client) -> None:
-    resp = client.get("/api/v1/bases")
-    assert resp.status_code in (401, 403)

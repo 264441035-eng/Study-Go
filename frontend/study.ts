@@ -1,4 +1,5 @@
 export {};
+
 let startTime: number | null = null;
 let timerInterval: number | null = null;
 let elapsedSeconds = 0;
@@ -86,13 +87,7 @@ function stopStudy(): void {
     if (startTime === null) {
         return;
     }
-    //const endTime = Date.now();
 
-    /*
-    const studyTime = Math.floor(
-        (endTime - startTime) / 1000
-    );
-    */
     if (timerInterval !== null) {
         clearInterval(timerInterval);
         timerInterval = null;
