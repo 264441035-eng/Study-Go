@@ -15,7 +15,6 @@ function useHashRoute() {
 
 export default function App() {
   const hash = useHashRoute();
-  // 配布 URL は #/chat?token=… のようにクエリが付くため、パス部分だけで判定する。
   const path = hash.split("?")[0];
   const page = path === "#/chat" ? <ChatPage /> : <HomePage />;
   return <main style={{ fontFamily: "sans-serif", padding: 32 }}>{page}</main>;

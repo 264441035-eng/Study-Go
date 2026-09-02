@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import "./chat.css";
 import {
   fetchDevToken,
   finishSession,
@@ -13,6 +14,11 @@ import { clearStoredToken, getStoredToken, login } from "./auth";
 interface ChatMessage {
   role: "assistant" | "user";
   content: string;
+}
+
+// ホームに戻る（MPA なので index.html へ遷移）。
+function goHome() {
+  window.location.href = "index.html";
 }
 
 export default function AiTutorChat() {
@@ -117,108 +123,123 @@ export default function AiTutorChat() {
 
   if (authChecking) {
     return (
-      <section style={styles.wrap}>
-        <p style={styles.hint}>確認中…</p>
-      </section>
+      <div className="chat-page">
+        <section className="chat-panel">
+          <p className="chat-hint">確認中…</p>
+        </section>
+      </div>
     );
   }
 
   if (!token) {
     return (
-      <section style={styles.wrap}>
-        <h2 style={{ margin: "0 0 4px" }}>ログイン</h2>
-        <p style={styles.hint}>配布された ID とパスワードでログインしてください。</p>
-        <LoginForm onLogin={setToken} />
-      </section>
+      <div className="chat-page">
+        <header className="chat-header">
+          <button className="back-button" type="button" onClick={goHome}>← ホームに戻る</button>
+        </header>
+        <section className="chat-panel">
+          <h1>AIチューター</h1>
+          <p className="chat-hint">配布された ID とパスワードでログインしてください。</p>
+          <LoginForm onLogin={setToken} />
+        </section>
+      </div>
     );
   }
 
   return (
-    <section style={styles.wrap}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2 style={{ margin: "0 0 4px" }}>AIチューターと話す</h2>
-        <button style={styles.link} onClick={handleLogout}>ログアウト</button>
-      </div>
-      <p style={styles.hint}>
-        今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。
-      </p>
+    <div className="chat-page">
+      <header className="chat-header">
+        <button className="back-button" type="button" onClick={goHome}>← ホームに戻る</button>
+        <button className="logout-link" type="button" onClick={handleLogout}>ログアウト</button>
+      </header>
 
-      {!sessionId ? (
-        <button style={styles.primary} onClick={handleStart} disabled={loading}>
-          {loading ? "接続中…" : "会話を始める"}
-        </button>
-      ) : (
-        <>
-          <div ref={logRef} style={styles.log}>
-            {messages.map((m, i) => (
-              <div key={i} style={m.role === "user" ? styles.userRow : styles.aiRow}>
-                <span style={m.role === "user" ? styles.userBubble : styles.aiBubble}>
-                  {m.content}
-                </span>
-              </div>
-            ))}
-            {loading && <div style={styles.aiRow}><span style={styles.aiBubble}>…</span></div>}
-          </div>
+      <section className="chat-panel">
+        <h1>AIチューター</h1>
+        <p className="chat-hint">
+          今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。
+        </p>
 
-          {result ? (
-            <div style={styles.report}>
-              <h3 style={{ margin: "0 0 8px" }}>評価レポート</h3>
-              <p style={{ margin: "4px 0" }}>
-                理解度スコア: <b>{result.score}</b> / 100&emsp;&emsp;獲得XP: <b>{result.xp}</b>
-              </p>
-              <p style={{ margin: "4px 0" }}>{result.summary}</p>
-              <p style={{ margin: "8px 0 2px" }}><b>強み</b></p>
-              <ul style={{ margin: 0 }}>{result.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
-              <p style={{ margin: "8px 0 2px" }}><b>弱点</b></p>
-              <ul style={{ margin: 0 }}>{result.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
-              <button style={{ ...styles.primary, marginTop: 12 }} onClick={handleStart}>
-                もう一度
-              </button>
+        {!sessionId ? (
+          <button className="start-button" type="button" onClick={handleStart} disabled={loading}>
+            {loading ? "接続中…" : "会話を始める"}
+          </button>
+        ) : (
+          <>
+            <div ref={logRef} className="chat-log" aria-live="polite">
+              {messages.map((m, i) => (
+                <div key={i} className={`row ${m.role === "user" ? "user-row" : "ai-row"}`}>
+                  <span className={`bubble ${m.role === "user" ? "user-bubble" : "ai-bubble"}`}>
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+              {loading && (
+                <div className="row ai-row">
+                  <span className="bubble ai-bubble">…</span>
+                </div>
+              )}
             </div>
-          ) : (
-            <div style={styles.inputRow}>
-              <textarea
-                style={styles.input}
-                value={input}
-                rows={3}
-                placeholder="話したいことを入力…（Enterで改行 / ⌘・Ctrl+Enterで送信）"
-                disabled={loading || finished}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  // IME変換確定のEnterや通常のEnterでは送信しない。
-                  if (
-                    e.key === "Enter" &&
-                    (e.metaKey || e.ctrlKey) &&
-                    !e.nativeEvent.isComposing
-                  ) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-              />
-              <div style={styles.buttonCol}>
-                <button style={styles.primary} onClick={handleSend} disabled={loading || !input.trim()}>
-                  送信
-                </button>
-                <button
-                  style={styles.finish}
-                  onClick={handleFinish}
-                  disabled={loading}
-                  title={state === "ready_to_finish" ? "十分に話せました" : undefined}
-                >
-                  終了して評価
+
+            {result ? (
+              <div className="report">
+                <h3>評価レポート</h3>
+                <p style={{ margin: "4px 0" }}>
+                  理解度スコア: <b>{result.score}</b> / 100&emsp;&emsp;獲得XP: <b>{result.xp}</b>
+                </p>
+                <p style={{ margin: "4px 0" }}>{result.summary}</p>
+                <p style={{ margin: "8px 0 2px" }}><b>強み</b></p>
+                <ul>{result.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                <p style={{ margin: "8px 0 2px" }}><b>弱点</b></p>
+                <ul>{result.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                <button className="start-button" type="button" onClick={handleStart} style={{ marginTop: 12 }}>
+                  もう一度
                 </button>
               </div>
-            </div>
-          )}
-          {state === "ready_to_finish" && !result && (
-            <p style={styles.readyHint}>十分に確認できました。「終了して評価」を押せます。</p>
-          )}
-        </>
-      )}
+            ) : (
+              <div className="input-wrap">
+                <textarea
+                  value={input}
+                  rows={3}
+                  placeholder="話したいことを入力…（Enterで改行 / ⌘・Ctrl+Enterで送信）"
+                  disabled={loading || finished}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    // IME変換確定のEnterや通常のEnterでは送信しない。
+                    if (
+                      e.key === "Enter" &&
+                      (e.metaKey || e.ctrlKey) &&
+                      !e.nativeEvent.isComposing
+                    ) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+                <div className="action-stack">
+                  <button className="send-button" type="button" onClick={handleSend} disabled={loading || !input.trim()}>
+                    送信
+                  </button>
+                  <button
+                    className="finish-button"
+                    type="button"
+                    onClick={handleFinish}
+                    disabled={loading}
+                    title={state === "ready_to_finish" ? "十分に話せました" : undefined}
+                  >
+                    終了して評価
+                  </button>
+                </div>
+              </div>
+            )}
+            {state === "ready_to_finish" && !result && (
+              <p className="ready-hint">十分に確認できました。「終了して評価」を押せます。</p>
+            )}
+          </>
+        )}
 
-      {error && <p style={styles.error}>{error}</p>}
-    </section>
+        {error && <p className="chat-error">{error}</p>}
+      </section>
+    </div>
   );
 }
 
@@ -243,67 +264,24 @@ function LoginForm({ onLogin }: { onLogin: (token: string) => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={styles.loginForm}>
+    <form onSubmit={handleSubmit} className="login-form">
       <input
-        style={styles.input}
         value={userId}
         placeholder="ID"
         autoComplete="username"
         onChange={(e) => setUserId(e.target.value)}
       />
       <input
-        style={styles.input}
         type="password"
         value={password}
         placeholder="パスワード"
         autoComplete="current-password"
         onChange={(e) => setPassword(e.target.value)}
       />
-      <button style={styles.primary} type="submit" disabled={loading || !userId.trim() || !password}>
+      <button className="send-button" type="submit" disabled={loading || !userId.trim() || !password}>
         {loading ? "ログイン中…" : "ログイン"}
       </button>
-      {error && <p style={styles.error}>{error}</p>}
+      {error && <p className="chat-error">{error}</p>}
     </form>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 640, margin: "0 auto", fontFamily: "sans-serif" },
-  hint: { color: "#555", fontSize: 14, margin: "0 0 12px" },
-  log: {
-    border: "1px solid #ddd", borderRadius: 8, padding: 12, height: 360,
-    overflowY: "auto", background: "#fafafa",
-  },
-  aiRow: { display: "flex", justifyContent: "flex-start", margin: "6px 0" },
-  userRow: { display: "flex", justifyContent: "flex-end", margin: "6px 0" },
-  aiBubble: {
-    background: "#eef2ff", color: "#1e293b", padding: "8px 12px",
-    borderRadius: 12, maxWidth: "80%", whiteSpace: "pre-wrap",
-  },
-  userBubble: {
-    background: "#2563eb", color: "#fff", padding: "8px 12px",
-    borderRadius: 12, maxWidth: "80%", whiteSpace: "pre-wrap",
-  },
-  inputRow: { display: "flex", gap: 8, marginTop: 12, alignItems: "stretch" },
-  input: {
-    flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc",
-    fontFamily: "inherit", fontSize: 14, resize: "vertical",
-  },
-  buttonCol: { display: "flex", flexDirection: "column", gap: 8 },
-  primary: {
-    padding: "8px 16px", borderRadius: 8, border: "none",
-    background: "#2563eb", color: "#fff", cursor: "pointer",
-  },
-  finish: {
-    padding: "8px 16px", borderRadius: 8, border: "1px solid #2563eb",
-    background: "#fff", color: "#2563eb", cursor: "pointer",
-  },
-  readyHint: { color: "#059669", fontSize: 13, margin: "8px 0 0" },
-  loginForm: { display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 },
-  link: {
-    border: "none", background: "none", color: "#2563eb", cursor: "pointer",
-    fontSize: 13, padding: 0,
-  },
-  report: { marginTop: 12, padding: 16, border: "1px solid #ddd", borderRadius: 8, background: "#fff" },
-  error: { color: "#dc2626", fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap" },
-};

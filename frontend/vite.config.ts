@@ -21,11 +21,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: "index.html",
+        chat: "chat.html",
         study: "study.html",
         map: "map.html",
         task: "task.html",
         training: "training.html",
-        chat: "chat.html",
       },
     },
   },
