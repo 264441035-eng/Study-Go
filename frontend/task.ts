@@ -39,6 +39,9 @@ const taskMessage = document.getElementById(
     "task-message",
 ) as HTMLParagraphElement;
 const backButton = document.getElementById("back-button") as HTMLButtonElement;
+const resetButton = document.getElementById(
+    "reset-button",
+) as HTMLButtonElement | null;
 
 
 // --------------------
@@ -270,6 +273,42 @@ exerciseTab.addEventListener("click", () => {
 
 backButton.addEventListener("click", () => {
     window.location.href = "index.html";
+});
+
+
+// --------------------
+// デモ用：タスクの完了状態をリセット
+// --------------------
+
+// リセットAPIを呼んだあと、タスク一覧を取り直して再描画する。
+async function resetTasks(): Promise<void> {
+    if (!window.confirm("全タスクの完了状態を未完了に戻します。よろしいですか？")) {
+        return;
+    }
+    if (resetButton !== null) {
+        resetButton.disabled = true;
+    }
+    try {
+        const response = await fetch(`${API_BASE}/api/tasks/reset`, {
+            method: "POST",
+        });
+        if (!response.ok) {
+            throw new Error(`reset API error: ${response.status}`);
+        }
+        await loadTasks();
+        showMessage("タスクをリセットしました");
+    } catch (error) {
+        console.error("タスクのリセットに失敗:", error);
+        showMessage("リセットに失敗しました", true);
+    } finally {
+        if (resetButton !== null) {
+            resetButton.disabled = false;
+        }
+    }
+}
+
+resetButton?.addEventListener("click", () => {
+    void resetTasks();
 });
 
 

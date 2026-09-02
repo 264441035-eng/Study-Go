@@ -313,3 +313,33 @@ body {
     background-color: #fde2e4;
     color: #890e24;
 }
+
+/* デモ用リセットボタン（ホームのキャラリセットと同じ見た目に揃える） */
+.reset-button {
+    display: block;
+    margin: 20px auto 0;
+    border: 2px solid #b0b6c0;
+    background-color: #f2f4f7;
+    border-radius: 14px;
+    padding: 6px 14px;
+
+    color: #5b6472;
+    font-size: 12px;
+    font-weight: bold;
+
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.reset-button:hover {
+    transform: scale(1.03);
+}
+
+.reset-button:active {
+    transform: scale(0.96);
+}
+
+.reset-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}

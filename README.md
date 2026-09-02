@@ -44,7 +44,7 @@ docker compose up --build
    - ユーザ名: `study_go`
    - パスワード: `study_go`
    - データベース: `study_go`
-4. ログイン後、左メニューのテーブル一覧（`bases` / `characters` / `todo_items` など）から
+4. ログイン後、左メニューのテーブル一覧（`bases` / `characters` / `tasks` など）から
    任意のテーブルをクリックすると、データをテーブル形式で閲覧・編集できる。
 
 ### 個別に起動

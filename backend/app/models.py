@@ -10,7 +10,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from functools import lru_cache
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, Numeric, String, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    Numeric,
+    String,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -156,19 +166,42 @@ class Character(Base):
     penalty_applied_through: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class TodoItem(Base):
-    """勉強・運動タスクの学習用シンプルテーブル。
+class Task(Base):
+    """勉強・運動タスク（勉強/運動タブに表示する既製タスク）。
 
-    名称・カテゴリ（勉強/運動）・達成済みかどうかの3項目を保持する。
-    他機能（task, character, base）と同様にログイン機能を持たないため、
-    ユーザーに紐付かないグローバルなデータとして扱う。
+    タスクの定義（タイトル・カテゴリ・表示条件・達成方法）と、
+    デモ用の完了フラグ（done）を1行に持つ。初期タスクは Alembic の
+    データマイグレーションで投入する（app.task_seed.DEFAULT_TASKS）。
+
+    他機能（character, base）と同様にログイン機能を持たないため、
+    ユーザーに紐付かないグローバルなデータとして扱う。完了状態も全員共通で、
+    リセットは「デモ用リセットAPI」を叩いたときだけ（毎日の自動リセットはしない）。
     """
 
-    __tablename__ = "todo_items"
+    __tablename__ = "tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    # フロントは id を数値としてURLに使う（/api/tasks/{category}/{id}/status）。
+    # 既製タスクなので id は投入時に明示採番する（勉強=1〜, 運動=101〜）。
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    # "study" または "exercise"。
     category: Mapped[str] = mapped_column(String(20), nullable=False)
-    done: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    # 勉強時間による自動達成に使う所要分数（auto_time のみ。それ以外は None）。
+    minute: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # このレベル以上で表示する。
+    required_level: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1", default=1
+    )
+    # 表示する拠点カテゴリのカンマ区切り。空文字ならどの拠点でも表示する。
+    base_categories: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default="", default=""
+    )
+    # 達成方法: "auto_time"（勉強時間で自動）/ "manual"（手動）/ "external"（他機能から）。
+    completion_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="manual", default="manual"
+    )
+    # 完了済みかどうか（全員共通・永続）。
+    done: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
