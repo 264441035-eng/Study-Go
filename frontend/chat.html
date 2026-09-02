@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIチューター</title>
+    <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+    <main class="chat-page">
+        <header class="chat-header">
+            <button id="back-button" class="back-button" type="button" onclick="location.href='index.html'">
+                ←ホームに戻る
+            </button>
+        </header>
+
+        <section class="chat-panel">
+            <h1>AIチューター</h1>
+            <p class="chat-hint">
+                今日勉強したことを話してみよう。AIチューターが興味を持って聞いて、一緒に理解を深めてくれます。
+            </p>
+
+           
+
+            <div class="chat-log" aria-live="polite">
+                <div class="row ai-row">
+                    <span class="bubble ai-bubble">今日はどんなことを勉強しましたか？</span>
+                </div>
+
+                <div class="row user-row">
+                    <span class="bubble user-bubble">平方完成の意味がよくわからないです。</span>
+                </div>
+
+                <div class="row ai-row">
+                    <span class="bubble ai-bubble">平方完成は、式を $(x+a)^2 + b$ の形に変える考え方です。例を一緒に見てみましょう。</span>
+                </div>
+            </div>
+
+            <div class="input-wrap">
+                <textarea rows="3" placeholder="話したいことを入力…"></textarea>
+                <div class="action-stack">
+                    <button class="send-button" type="button">送信</button>
+                    <button class="finish-button" type="button">終了して評価</button>
+                </div>
+            </div>
+
+            <p class="ready-hint">十分に確認できました。「終了して評価」を押せます。</p>
+        </section>
+    </main>
+</body>
+</html>

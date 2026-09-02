@@ -6,7 +6,7 @@ export default function HomePage() {
       <p>Study-Go Home</p>
 
       <p>
-        <a href="/chat.html">AIチューターを試す</a>
+        <a href="#/chat">AIチューターを試す</a>
       </p>
     </>
   );

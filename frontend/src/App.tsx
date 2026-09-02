@@ -15,12 +15,7 @@ function useHashRoute() {
 
 export default function App() {
   const hash = useHashRoute();
-  const pathname = window.location.pathname;
-  const hashPath = hash.split("?")[0];
-  const isChatRoute =
-    pathname === "/chat.html" ||
-    pathname === "/chat" ||
-    hashPath === "#/chat";
-  const page = isChatRoute ? <ChatPage /> : <HomePage />;
+  const path = hash.split("?")[0];
+  const page = path === "#/chat" ? <ChatPage /> : <HomePage />;
   return <main style={{ fontFamily: "sans-serif", padding: 32 }}>{page}</main>;
 }
