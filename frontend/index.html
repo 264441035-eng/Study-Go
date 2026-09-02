@@ -11,20 +11,36 @@
 
     <main class="home">
 
-        <!-- レベル -->
-        <h1>Lv. <span id="level">レベルを取得</span></h1>
+        <!-- 上部バー：レベル/経験値 と 振り返り(チャット)ボタン -->
+        <header class="home-header">
+            <div class="level-block">
+                <h1>Lv. <span id="level">--</span></h1>
+                <!-- 経験値（進化まで）バー -->
+                <div class="xp-bar" aria-label="次の進化までの経験値">
+                    <div class="xp-bar-fill" id="xpBarFill"></div>
+                </div>
+                <p class="xp-label" id="xpLabel">次の進化まで --</p>
+            </div>
+
+            <!-- 右上：学んだことを振り返る（チャットへ） -->
+            <button class="reflect-button"
+                    onclick="location.href='chat.html#/chat'">
+                <img src="images/chat.png" alt="">
+                <span>振り返る</span>
+            </button>
+        </header>
 
         <!-- 今日の勉強時間 -->
         <p class="study-time">
-            今日の勉強時間：<span id="studyTime">勉強時間を取得</span>
+            今日の勉強時間：<span id="studyTime">--</span>
         </p>
 
-        <!-- キャラの状態など -->
-        <p class="status">仮置き</p>
+        <!-- キャラの状態メッセージ -->
+        <p class="status" id="status">読み込み中…</p>
 
-        <!-- キャラクター -->
+        <!-- キャラクター（進化段階に応じて画像が切り替わる） -->
         <div class="character">
-            <img src="images/deformed.png" alt="キャラクター">
+            <img id="characterImage" src="images/deformed.png" alt="キャラクター">
         </div>
 
         <!-- 勉強ボタン -->
@@ -33,19 +49,13 @@
             <span>勉強</span>
         </button>
 
-        <!-- 下の4つのボタン -->
+        <!-- 下のメニューボタン -->
         <div class="menu-buttons">
-
-            <button class="menu-button chat-button"
-                    onclick="location.href='chat.html#/chat'">
-                <img src="images/chat.png" alt="">
-                <span>チャット</span>
-            </button>
 
             <button class="menu-button map-button"
                     onclick="location.href='map.html'">
                 <img src="images/map.png" alt="">
-                <span>マップ</span>
+                <span>拠点</span>
             </button>
 
             <button class="menu-button task-button"

@@ -5,6 +5,7 @@
 main.py で `app.include_router(...)` を1行追加するだけで良い。
 """
 
+import os
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from enum import Enum
@@ -23,6 +24,11 @@ from app.routers.character import (
 )
 
 JST = timezone(timedelta(hours=9))
+
+# タスクを1つ完了したときにキャラへ加算する経験値（分換算）。
+# 経験値は勉強分数に一本化しているため、ボーナス勉強時間として加算する。
+# デモは短時間で進化を見せたいので小さめ。本番では環境変数で調整する。
+TASK_COMPLETION_XP_MINUTES = int(os.getenv("TASK_COMPLETION_XP_MINUTES", "3"))
 
 router = APIRouter(prefix="/api/tasks", tags=["task"])
 
@@ -506,6 +512,22 @@ def list_exercise_tasks(
 # =========================================================
 
 
+def _award_task_completion_xp(db: Session) -> None:
+    """タスク完了時にキャラへ経験値（ボーナス勉強時間）を加算する。
+
+    ログインのないデモではDBの先頭の1体（なければ作成）へ加算する。
+    経験値は分数に一本化しているので、勉強時間と同じ育成ロジックを通す。
+    """
+    if TASK_COMPLETION_XP_MINUTES <= 0:
+        return
+
+    character = get_or_create_demo_character(db, for_update=True)
+    add_study_minutes_to_character(
+        character, TASK_COMPLETION_XP_MINUTES, utc_now()
+    )
+    db.commit()
+
+
 @router.post(
     "/study/{task_id}/status",
     response_model=StudyTask,
@@ -513,14 +535,22 @@ def list_exercise_tasks(
 def update_study_task_status(
     task_id: int,
     update: TaskStatusUpdate,
+    db: Session = Depends(get_db),
 ) -> StudyTask:
-    """勉強タスクの達成状況を変更する。"""
+    """勉強タスクの達成状況を変更する。
+
+    未完了から完了に変わったときだけ、キャラへ経験値を加算する。
+    （完了→未完了に戻したり、既に完了済みのタスクを再送しても加算しない。）
+    """
 
     _reset_daily_status_if_needed()
 
     for task in _study_tasks:
         if task.id == task_id:
+            newly_completed = update.done and not task.done
             task.done = update.done
+            if newly_completed:
+                _award_task_completion_xp(db)
             return task
 
     raise HTTPException(
@@ -536,14 +566,21 @@ def update_study_task_status(
 def update_exercise_task_status(
     task_id: int,
     update: TaskStatusUpdate,
+    db: Session = Depends(get_db),
 ) -> ExerciseTask:
-    """運動タスクの達成状況を変更する。"""
+    """運動タスクの達成状況を変更する。
+
+    未完了から完了に変わったときだけ、キャラへ経験値を加算する。
+    """
 
     _reset_daily_status_if_needed()
 
     for task in _exercise_tasks:
         if task.id == task_id:
+            newly_completed = update.done and not task.done
             task.done = update.done
+            if newly_completed:
+                _award_task_completion_xp(db)
             return task
 
     raise HTTPException(

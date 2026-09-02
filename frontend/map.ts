@@ -1,4 +1,5 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import { appearanceForStage } from "./character";
 
 // 本番では VITE_API_URL に ALB の URL を渡す。未設定時は同一オリジンの /api を叩く。
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -311,6 +312,85 @@ function renderBases(bases: Base[]): void {
     showMessage(bases.length === 0 ? "拠点がまだ登録されていません。" : "");
 }
 
+// =========================
+// 現在地に「今の進化段階のキャラ」を描画する
+// =========================
+
+let currentLocationMarker: google.maps.Marker | undefined;
+
+// キャラの現在の進化段階を取得する。失敗時は 0（進化前）とする。
+async function fetchCharacterStage(): Promise<number> {
+    try {
+        const initResponse = await fetch(
+            `${API_BASE}/api/characters/initialize`,
+            { method: "POST" },
+        );
+        if (!initResponse.ok) {
+            throw new Error(`initialize API error: ${initResponse.status}`);
+        }
+        const characterId: string = await initResponse.json();
+
+        const response = await fetch(
+            `${API_BASE}/api/characters/${characterId}`,
+        );
+        if (!response.ok) {
+            throw new Error(`character API error: ${response.status}`);
+        }
+        const data = await response.json();
+        return typeof data.evolution_stage === "number"
+            ? data.evolution_stage
+            : 0;
+    } catch (error) {
+        console.error("キャラの進化段階の取得に失敗:", error);
+        return 0;
+    }
+}
+
+// 現在地を取得し、進化段階に応じたキャラ画像のマーカーを立てる。
+async function showCurrentLocationCharacter(): Promise<void> {
+    if (!map || !navigator.geolocation) {
+        return;
+    }
+
+    const stage = await fetchCharacterStage();
+    const appearance = appearanceForStage(stage);
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            if (!map) {
+                return;
+            }
+            const location = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+
+            currentLocationMarker?.setMap(null);
+            currentLocationMarker = new google.maps.Marker({
+                position: location,
+                map,
+                title: "現在地",
+                icon: {
+                    url: appearance.src,
+                    scaledSize: new google.maps.Size(48, 64),
+                    anchor: new google.maps.Point(24, 64),
+                },
+                // 拠点ピンより手前に表示する。
+                zIndex: 10000,
+            });
+
+            // 拠点が無いときだけ現在地に寄せる（拠点があればそちらの表示を優先）。
+            if (baseMarkers.length === 0) {
+                map.setCenter(location);
+                map.setZoom(15);
+            }
+        },
+        () => {
+            // 現在地が取得できなくても地図は使えるので、静かに諦める。
+        },
+    );
+}
+
 async function refreshBases(): Promise<void> {
     try {
         const bases = await fetchBases();
@@ -485,6 +565,7 @@ async function initPage(): Promise<void> {
     });
 
     await refreshBases();
+    void showCurrentLocationCharacter();
 }
 
 initPage();

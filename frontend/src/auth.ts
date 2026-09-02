@@ -1,7 +1,8 @@
 // ログイン認証クライアント。
 // backend の /api/auth/login で JWT を取得し、localStorage に保持する。
 // このトークンを AI Tutor 呼び出しの Authorization に使う（aiTutor.ts）。
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+// 他画面と同じ VITE_API_URL に統一。未設定時は同一オリジンの /api。
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const TOKEN_KEY = "ai_tutor_token";
 
 export interface LoginResponse {
