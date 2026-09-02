@@ -245,6 +245,27 @@ def add_study_minutes_to_character(
     character.penalty_applied_through = study_date(now)
 
 
+# 追加関数: キャラクターを作成直後と同じ初期状態へ戻す。
+# デモで何度もレベルアップを見せるため、勉強・ペナルティ・育成状態を一括で初期化する。
+def reset_character_progress(character: Character) -> None:
+    """キャラクターの勉強時間・ペナルティ・育成状態を初期状態へ戻す。
+
+    create_characterの初期化と同じ値へ戻し、最後にrefresh_character_progressで
+    派生状態を再計算する。DBへのコミットは呼び出し元に任せる。
+    """
+    character.total_study_minutes = 0
+    character.total_penalty_minutes = 0
+    character.effective_study_minutes = 0
+    character.level = 1
+    character.highest_level = 1
+    character.minimum_level = 1
+    character.evolution_stage = 0
+    character.remaining_minutes_to_next_level = 0
+    character.last_studied_at = None
+    character.penalty_applied_through = None
+    refresh_character_progress(character)
+
+
 # 追加関数: 保存状態を表示用時間を含むAPIレスポンスへ変換する。
 def to_character_out(character: Character) -> CharacterOut:
     """DBモデルを表示用時間付きのAPIレスポンスへ変換する。
@@ -383,4 +404,32 @@ def record_study(
     db.refresh(character)
 
     # 表示用の時間を含むAPIレスポンスへ変換して返す。
+    return to_character_out(character)
+
+
+# 追加エンドポイント: デモ用にキャラクターのレベルを初期状態へリセットする。
+@router.post("/{character_id}/reset", summary="キャラクターのレベルをリセット")
+def reset_character(
+    character_id: UUID,
+    db: Session = Depends(get_db),
+) -> CharacterOut:
+    """指定キャラクターの勉強時間・ペナルティ・レベルを初期状態へ戻す。
+
+    - **入力URL**: ``character_id`` にキャラクターのUUIDを指定する。
+    - **出力**: リセット後のレベル1の育成状態と表示用時間。
+    - **404**: 指定したキャラクターが存在しない場合。
+
+    デモで繰り返しレベルアップを見せるための機能。同時更新による不整合を防ぐため、
+    更新中は対象DB行をロックする。
+    """
+    character = db.scalar(
+        select(Character).where(Character.id == character_id).with_for_update()
+    )
+    if character is None:
+        raise HTTPException(status_code=404, detail="Character not found")
+    reset_character_progress(character)
+
+    db.commit()
+    db.refresh(character)
+
     return to_character_out(character)
