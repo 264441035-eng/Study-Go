@@ -13,9 +13,10 @@ from collections.abc import Iterator
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.config import Settings
-from app.llm.interface import LLMClient, Message
+from app.llm.interface import LLMClient, LLMError, Message
 
 # messages が空のとき (opening_message) に注入する開始プロンプト。
 # Converse API は messages を空にできないため。
@@ -53,6 +54,17 @@ class BedrockLLMClient(LLMClient):
     def _system(system: str) -> list[dict]:
         return [{"text": system}] if system else []
 
+    def _converse(self, **kwargs) -> dict:
+        """Converse を呼び、Bedrock/認証系の失敗は LLMError に正規化する。
+
+        AccessDenied (モデルアクセス未有効) やスロットリングを生の 500 で
+        伝播させず、API 層で 503 に落とせるようにする。
+        """
+        try:
+            return self._client.converse(**kwargs)
+        except (ClientError, BotoCoreError) as e:
+            raise LLMError(f"Bedrock converse failed: {e}") from e
+
     def complete(
         self,
         *,
@@ -61,7 +73,7 @@ class BedrockLLMClient(LLMClient):
         model_id: str | None = None,
         max_tokens: int = 1024,
     ) -> str:
-        resp = self._client.converse(
+        resp = self._converse(
             modelId=self._model(model_id),
             system=self._system(system),
             messages=self._converse_messages(messages),
@@ -77,12 +89,15 @@ class BedrockLLMClient(LLMClient):
         model_id: str | None = None,
         max_tokens: int = 1024,
     ) -> Iterator[str]:
-        resp = self._client.converse_stream(
-            modelId=self._model(model_id),
-            system=self._system(system),
-            messages=self._converse_messages(messages),
-            inferenceConfig={"maxTokens": max_tokens},
-        )
+        try:
+            resp = self._client.converse_stream(
+                modelId=self._model(model_id),
+                system=self._system(system),
+                messages=self._converse_messages(messages),
+                inferenceConfig={"maxTokens": max_tokens},
+            )
+        except (ClientError, BotoCoreError) as e:
+            raise LLMError(f"Bedrock converse_stream failed: {e}") from e
         for event in resp["stream"]:
             delta = event.get("contentBlockDelta", {}).get("delta", {})
             if "text" in delta:
@@ -110,7 +125,7 @@ class BedrockLLMClient(LLMClient):
             # 必ずこのツールを呼ばせる = 構造化出力を強制。
             "toolChoice": {"tool": {"name": _STRUCTURED_TOOL_NAME}},
         }
-        resp = self._client.converse(
+        resp = self._converse(
             modelId=self._model(model_id),
             system=self._system(system),
             messages=self._converse_messages(messages),
