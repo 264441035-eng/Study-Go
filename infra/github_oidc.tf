@@ -71,6 +71,9 @@ data "aws_iam_policy_document" "github_deploy" {
       "ecs:DescribeTaskDefinition",
       "ecs:RegisterTaskDefinition",
       "ecs:UpdateService",
+      # deploy 時にスキーマ初期化を one-off タスクで実行するため（deploy.yml）
+      "ecs:RunTask",
+      "ecs:DescribeTasks",
     ]
     resources = ["*"]
   }
