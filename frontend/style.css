@@ -22,11 +22,90 @@ body {
     align-items: center;
 }
 
+/* 上部バー：レベル/経験値 と 振り返りボタン */
+.home-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.level-block {
+    flex: 1;
+    min-width: 0;
+}
+
 /* レベル */
 h1 {
     margin: 0;
     font-size: 32px;
     text-align: center;
+}
+
+.level-block h1 {
+    text-align: left;
+    font-size: 28px;
+}
+
+/* 経験値（進化まで）バー */
+.xp-bar {
+    width: 100%;
+    max-width: 260px;
+    height: 12px;
+    margin-top: 8px;
+    background-color: #eee;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.xp-bar-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #b98bea, #8e5bd4);
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}
+
+.xp-label {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b6b6b;
+}
+
+/* 右上：学んだことを振り返る（チャットへ） */
+.reflect-button {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+
+    border: 3px solid #ef6d7a;
+    background-color: #ffe0e5;
+    border-radius: 18px;
+    padding: 8px 12px;
+
+    color: #890e24;
+    font-size: 12px;
+    font-weight: bold;
+
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.reflect-button:hover {
+    transform: scale(1.05);
+}
+
+.reflect-button:active {
+    transform: scale(0.95);
+}
+
+.reflect-button img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 /* 勉強時間 */
@@ -36,10 +115,12 @@ h1 {
     text-align: center;
 }
 
-/* 仮置き */
+/* キャラの状態メッセージ */
 .status {
-    margin: 35px 0 10px;
-    font-size: 20px;
+    margin: 25px 0 10px;
+    font-size: 18px;
+    text-align: center;
+    color: #4b0082;
 }
 
 /* キャラクター */
@@ -58,6 +139,16 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+/* 静止画(PNG)キャラをぴょこぴょこ動かす。GIFにはこのクラスを付けない。 */
+.character img.is-bouncing {
+    animation: pyoko 0.9s ease-in-out infinite;
+}
+
+@keyframes pyoko {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
 }
 
 /* 勉強ボタン */

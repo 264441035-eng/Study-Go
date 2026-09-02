@@ -1,6 +1,8 @@
 // AI Tutor Service クライアント。
 // Frontend は自前バックエンドを経由して ai-tutor-service を呼ぶ。
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+// 他画面（home.ts/map.ts）と同じ VITE_API_URL に統一。未設定時は同一オリジンの /api。
+// 開発では vite が /api を localhost:8000 にプロキシするため、未設定でも動く。
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const AI_TUTOR_BASE = import.meta.env.VITE_AI_TUTOR_URL ?? API_BASE;
 
 export type ConversationState = "questioning" | "ready_to_finish";
