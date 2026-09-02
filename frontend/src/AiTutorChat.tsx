@@ -8,6 +8,7 @@ import {
   type ConversationState,
   type FinishResponse,
 } from "./aiTutor";
+import { clearStoredToken, getStoredToken, login } from "./auth";
 
 interface ChatMessage {
   role: "assistant" | "user";
@@ -15,7 +16,10 @@ interface ChatMessage {
 }
 
 export default function AiTutorChat() {
-  const [token, setToken] = useState<string | null>(null);
+  // トークンの取得順: ログイン保存 → 配布URL(?token=)。どちらも無ければログインフォーム。
+  const [token, setToken] = useState<string | null>(() => getStoredToken() ?? getTokenFromUrl());
+  // token が無いときだけ、local(APP_ENV=local)向けに dev トークン自動取得を試す。
+  const [authChecking, setAuthChecking] = useState(() => (getStoredToken() ?? getTokenFromUrl()) === null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [state, setState] = useState<ConversationState | null>(null);
@@ -29,25 +33,46 @@ export default function AiTutorChat() {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [messages, result]);
 
+  // token 未取得のときだけ dev トークン取得を試す。
+  // local では成功してログイン不要、本番では /dev/token が 404 なので失敗しフォームを出す。
+  useEffect(() => {
+    if (token !== null) {
+      setAuthChecking(false);
+      return;
+    }
+    let cancelled = false;
+    setAuthChecking(true);
+    fetchDevToken()
+      .then((t) => {
+        if (!cancelled) setToken(t);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAuthChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   const finished = result !== null;
 
+  function handleLogout() {
+    clearStoredToken();
+    setToken(null);
+    setSessionId(null);
+    setMessages([]);
+    setState(null);
+    setResult(null);
+    setError(null);
+  }
+
   async function handleStart() {
+    if (!token) return;
     setError(null);
     setLoading(true);
     try {
-      // 配布 URL のトークンを優先。無い場合のみ local のデモ発行にフォールバック。
-      let t = getTokenFromUrl();
-      if (!t) {
-        try {
-          t = await fetchDevToken();
-        } catch {
-          throw new Error(
-            "アクセストークンが必要です。配布された URL（?token=… 付き）から開いてください。",
-          );
-        }
-      }
-      const s = await startSession(t);
-      setToken(t);
+      const s = await startSession(token);
       setSessionId(s.session_id);
       setMessages([{ role: "assistant", content: s.message }]);
       setState("questioning");
@@ -90,9 +115,30 @@ export default function AiTutorChat() {
     }
   }
 
+  if (authChecking) {
+    return (
+      <section style={styles.wrap}>
+        <p style={styles.hint}>確認中…</p>
+      </section>
+    );
+  }
+
+  if (!token) {
+    return (
+      <section style={styles.wrap}>
+        <h2 style={{ margin: "0 0 4px" }}>ログイン</h2>
+        <p style={styles.hint}>配布された ID とパスワードでログインしてください。</p>
+        <LoginForm onLogin={setToken} />
+      </section>
+    );
+  }
+
   return (
     <section style={styles.wrap}>
-      <h2 style={{ margin: "0 0 4px" }}>AIチューターと話す</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2 style={{ margin: "0 0 4px" }}>AIチューターと話す</h2>
+        <button style={styles.link} onClick={handleLogout}>ログアウト</button>
+      </div>
       <p style={styles.hint}>
         今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。
       </p>
@@ -176,6 +222,51 @@ export default function AiTutorChat() {
   );
 }
 
+function LoginForm({ onLogin }: { onLogin: (token: string) => void }) {
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!userId.trim() || !password || loading) return;
+    setError(null);
+    setLoading(true);
+    try {
+      onLogin(await login(userId.trim(), password));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={styles.loginForm}>
+      <input
+        style={styles.input}
+        value={userId}
+        placeholder="ID"
+        autoComplete="username"
+        onChange={(e) => setUserId(e.target.value)}
+      />
+      <input
+        style={styles.input}
+        type="password"
+        value={password}
+        placeholder="パスワード"
+        autoComplete="current-password"
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <button style={styles.primary} type="submit" disabled={loading || !userId.trim() || !password}>
+        {loading ? "ログイン中…" : "ログイン"}
+      </button>
+      {error && <p style={styles.error}>{error}</p>}
+    </form>
+  );
+}
+
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 640, margin: "0 auto", fontFamily: "sans-serif" },
   hint: { color: "#555", fontSize: 14, margin: "0 0 12px" },
@@ -208,6 +299,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#fff", color: "#2563eb", cursor: "pointer",
   },
   readyHint: { color: "#059669", fontSize: 13, margin: "8px 0 0" },
+  loginForm: { display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 },
+  link: {
+    border: "none", background: "none", color: "#2563eb", cursor: "pointer",
+    fontSize: 13, padding: 0,
+  },
   report: { marginTop: 12, padding: 16, border: "1px solid #ddd", borderRadius: 8, background: "#fff" },
   error: { color: "#dc2626", fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap" },
 };

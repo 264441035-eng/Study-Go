@@ -42,6 +42,7 @@ async function post<T>(path: string, token: string | null, body?: unknown): Prom
 
 // 配布された URL からアクセストークンを取り出す。
 // ハッシュルーティングのため #/chat?token=... と ?token=...#/chat の両方に対応。
+// 通常はログイン(auth.ts)で得たトークンを使うが、?token= 付き配布URLにも後方互換で対応する。
 export function getTokenFromUrl(): string | null {
   const hashQuery = window.location.hash.split("?")[1] ?? "";
   const fromHash = new URLSearchParams(hashQuery).get("token");
