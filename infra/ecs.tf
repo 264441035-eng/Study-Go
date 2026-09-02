@@ -37,7 +37,10 @@ resource "aws_ecs_task_definition" "backend" {
       ]
       environment = [
         # 同一 ALB オリジンで配信するため CORS は基本不要だが、明示しておく
-        { name = "CORS_ORIGINS", value = "http://${aws_lb.main.dns_name}" }
+        { name = "CORS_ORIGINS", value = "http://${aws_lb.main.dns_name}" },
+        # /api/chat/* プロキシ(chat.py)の転送先。ALB の /sessions* ルールが ai-tutor に振り分ける。
+        # 未設定だと localhost:8000（=自分自身）へ転送し 404 になる。
+        { name = "AI_TUTOR_SERVICE_URL", value = "http://${aws_lb.main.dns_name}" }
       ]
       # 起動時 init_db() が接続する DB 接続文字列を SSM SecureString から注入（database.tf）。
       # AI Tutor ログイン用に JWT 署名鍵(ai-tutor と共有)と認証情報も SSM から注入する。
