@@ -540,9 +540,15 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
         });
 
         // 勉強終了直後の登録なら、その場の勉強時間をそのまま新しい拠点に加算する。
+        // 拠点自体の登録は既に成功しているので、加算だけ失敗しても登録失敗としては扱わない。
         if (pendingStudySeconds !== null) {
-            await addStudyTimeToBase(base.id, pendingStudySeconds);
+            const secondsToAdd = pendingStudySeconds;
             pendingStudySeconds = null;
+            try {
+                await addStudyTimeToBase(base.id, secondsToAdd);
+            } catch (error) {
+                console.error("勉強時間の加算に失敗しました:", error);
+            }
         }
 
         exitRegisterMode();
