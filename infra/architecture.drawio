@@ -1,0 +1,187 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0">
+  <diagram id="study-go-infra" name="Study-Go Infra & CI/CD">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===================== Title ===================== -->
+        <mxCell id="title" value="Study-Go — インフラ構成 &amp; CI/CD (AWS ap-northeast-1)" style="text;html=1;fontSize=20;fontStyle=1;align=left;verticalAlign=middle;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== CI/CD lane ===================== -->
+        <mxCell id="dev" value="開発者" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.user;" vertex="1" parent="1">
+          <mxGeometry x="60" y="150" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ghbox" value="GitHub&#10;（リポジトリ + Actions）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292E;fontColor=#ffffff;strokeColor=#24292E;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="210" y="70" width="600" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="ci" value="&lt;b&gt;CI — .github/workflows/ci.yml&lt;/b&gt;&#10;（トリガ: pull_request）&#10;&#10;• backend : ruff + pytest（実 Postgres 16）&#10;• backend-smoke : docker build →&#10;&#160;&#160;alembic upgrade head → /health 疎通&#10;• frontend : eslint + vite build + vitest&#10;&#10;→ 全部グリーンで初めて main へマージ可" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606A;align=left;verticalAlign=top;fontSize=11;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="230" y="110" width="270" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="deploy" value="&lt;b&gt;Deploy — .github/workflows/deploy.yml&lt;/b&gt;&#10;（トリガ: push → main）&#10;&#10;1. OIDC で IAM ロールを一時 assume&#10;&#160;&#160;（アクセスキー不要）&#10;2. docker build &amp; push → ECR&#10;&#160;&#160;（backend / frontend / ai-tutor）&#10;3. backend : run-task で&#10;&#160;&#160;alembic upgrade head（失敗で中断）&#10;4. ecs update-service（安定まで wait）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606A;align=left;verticalAlign=top;fontSize=11;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="520" y="110" width="270" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="enduser" value="エンドユーザー&#10;（ブラウザ）" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.user;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="150" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== AWS Cloud ===================== -->
+        <mxCell id="aws" value="AWS Cloud" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="1440" height="1060" as="geometry" />
+        </mxCell>
+
+        <!-- ECR -->
+        <mxCell id="ecr" value="Amazon ECR&#10;(3 リポジトリ)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_container_registry;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="450" width="48" height="48" as="geometry" />
+        </mxCell>
+        <!-- IAM / OIDC -->
+        <mxCell id="iam" value="IAM ロール&#10;(GitHub OIDC)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management_iam;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="450" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== VPC ===================== -->
+        <mxCell id="vpc" value="VPC  10.20.0.0/16" style="sketch=0;outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="90" y="560" width="1010" height="860" as="geometry" />
+        </mxCell>
+
+        <!-- IGW -->
+        <mxCell id="igw" value="Internet&#10;Gateway" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.internet_gateway;" vertex="1" parent="1">
+          <mxGeometry x="110" y="590" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Public subnets -->
+        <mxCell id="pub" value="Public Subnets（マルチ AZ）" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F3E6;strokeColor=#7AA116;verticalAlign=top;align=left;fontColor=#3B5417;fontSize=12;fontStyle=1;spacingLeft=8;spacingTop=6;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="600" width="840" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" value="ALB&#10;(HTTP :80)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.application_load_balancer;" vertex="1" parent="1">
+          <mxGeometry x="270" y="650" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="albrules" value="リスナールール（優先度順）&#10;・/sessions*  → ai-tutor  (pri 90)&#10;・/api/*, /health → backend (pri 100)&#10;・default → frontend (nginx)" style="text;html=1;align=left;verticalAlign=top;fontSize=10;fillColor=#ffffff;strokeColor=#7AA116;rounded=1;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="420" y="640" width="270" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="nat" value="NAT Gateway&#10;(outbound)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.nat_gateway;" vertex="1" parent="1">
+          <mxGeometry x="930" y="650" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Private subnets -->
+        <mxCell id="priv" value="Private Subnets（マルチ AZ）" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E6F6F7;strokeColor=#00A4A6;verticalAlign=top;align=left;fontColor=#0B5C5D;fontSize=12;fontStyle=1;spacingLeft=8;spacingTop=6;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="790" width="840" height="590" as="geometry" />
+        </mxCell>
+
+        <!-- ECS cluster -->
+        <mxCell id="ecs" value="ECS Cluster — Fargate (awsvpc)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBE5D6;strokeColor=#ED7100;verticalAlign=top;align=left;fontColor=#7A3B00;fontSize=12;fontStyle=1;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="250" y="850" width="740" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_front" value="frontend&#10;(nginx / React)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+          <mxGeometry x="300" y="920" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_back" value="backend&#10;(FastAPI)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+          <mxGeometry x="560" y="920" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_ai" value="ai-tutor&#10;(FastAPI)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+          <mxGeometry x="820" y="920" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- RDS -->
+        <mxCell id="rds" value="RDS PostgreSQL 16&#10;(private, :5432)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1180" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="mignote" value="Deploy 時に one-off Fargate タスクで&#10;alembic upgrade head（本番マイグレーション）" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=#FFF7E6;strokeColor=#ED7100;rounded=1;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="430" y="1185" width="300" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Managed services (regional, outside VPC) ===================== -->
+        <mxCell id="ddb" value="DynamoDB&#10;sessions / student_models" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="640" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrock" value="Amazon Bedrock&#10;(Anthropic Claude&#10;jp.* Inference Profile)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#01A88D;fontColor=#ffffff;strokeColor=#017567;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="760" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm" value="SSM Parameter Store&#10;(SecureString:&#10;DB URL / JWT / AUTH)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.systems_manager_parameter_store;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="920" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cw" value="CloudWatch Logs&#10;(/ecs/*, 14日保持)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="1050" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Edges: CI/CD ===================== -->
+        <mxCell id="e_dev_gh" value="git push / PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;strokeColor=#24292E;" edge="1" parent="1" source="dev" target="ghbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_deploy_ecr" value="② build &amp; push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#ED7100;dashed=1;" edge="1" parent="1" source="deploy" target="ecr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_deploy_iam" value="① OIDC assume" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#DD344C;dashed=1;" edge="1" parent="1" source="deploy" target="iam">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_deploy_ecs" value="④ ecs update-service / run-task" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#ED7100;dashed=1;" edge="1" parent="1" source="deploy" target="ecs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="360" />
+              <mxPoint x="1120" y="830" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ecr_ecs" value="③ pull image" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#ED7100;" edge="1" parent="1" source="ecr" target="ecs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Edges: runtime traffic ===================== -->
+        <mxCell id="e_user_alb" value="HTTP :80" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;strokeColor=#232F3E;fontStyle=1;" edge="1" parent="1" source="enduser" target="alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_igw_alb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8C4FFF;" edge="1" parent="1" source="igw" target="alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_alb_front" value="default → frontend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#7AA116;" edge="1" parent="1" source="alb" target="svc_front">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_alb_back" value="/api/*  /health" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#7AA116;" edge="1" parent="1" source="alb" target="svc_back">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_alb_ai" value="/sessions*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#7AA116;" edge="1" parent="1" source="alb" target="svc_ai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_back_rds" value=":5432" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#C925D1;" edge="1" parent="1" source="svc_back" target="rds">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ai_ddb" value="CRUD" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#C925D1;" edge="1" parent="1" source="svc_ai" target="ddb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ai_bedrock" value="InvokeModel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#01A88D;" edge="1" parent="1" source="svc_ai" target="bedrock">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ecs_ssm" value="secrets 注入" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#E7157B;dashed=1;" edge="1" parent="1" source="ecs" target="ssm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ecs_cw" value="logs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#E7157B;dashed=1;" edge="1" parent="1" source="ecs" target="cw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ecs_nat" value="outbound" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;strokeColor=#8C4FFF;dashed=1;" edge="1" parent="1" source="ecs" target="nat">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_nat_igw" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8C4FFF;dashed=1;" edge="1" parent="1" source="nat" target="igw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_back_ai" value="chat プロキシ (/api/chat → ALB → ai-tutor)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=9;strokeColor=#999999;dashed=1;" edge="1" parent="1" source="svc_back" target="alb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== IaC note ===================== -->
+        <mxCell id="iac" value="&lt;b&gt;IaC: Terraform (infra/*.tf)&lt;/b&gt;&#10;VPC / ALB / ECS / RDS / DynamoDB / ECR /&#10;SSM / IAM(OIDC) を宣言的に管理。&#10;state はローカル（S3+DynamoDB へ移行可）。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F2E6FF;strokeColor=#8C4FFF;align=left;verticalAlign=top;fontSize=10;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1230" width="230" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Legend ===================== -->
+        <mxCell id="legend" value="&lt;b&gt;凡例&lt;/b&gt;&#10;━ 実線: 実行時トラフィック&#10;┄ 破線: デプロイ / 設定・ログ連携&#10;①〜④: main マージ後の自動デプロイ順序" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#232F3E;align=left;verticalAlign=top;fontSize=10;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="850" y="150" width="290" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
