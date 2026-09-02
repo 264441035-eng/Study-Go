@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "./style.css";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -8,8 +7,6 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const characterId = "aae96c9c-bf1c-4a97-bf29-ab69e7674df8";
 
 export default function Home() {
-  const navigate = useNavigate();
-
   const [studyTime, setStudyTime] = useState("取得中...");
   const [level, setLevel] = useState("取得中...");
 
@@ -26,8 +23,7 @@ export default function Home() {
       .then((data) => {
         console.log("Character API:", data);
 
-        // レベル
-        setLevel(String(data.level));
+        setLevel(String(data.level ?? 1));
       })
       .catch((error) => {
         console.error("キャラクター情報の取得に失敗:", error);
@@ -48,13 +44,12 @@ export default function Home() {
       .then((data) => {
         console.log("Task API:", data);
 
-        // TODO:
-        // Task APIの仕様が決まったら、
-        // ここで勉強時間を取得する。
-        //
-        // 例：
-        // setStudyTime(data.total_study_time);
-
+        // APIの仕様が決まったらここを変更
+        if (data.total_study_time !== undefined) {
+          setStudyTime(String(data.total_study_time));
+        } else {
+          setStudyTime("00:00");
+        }
       })
       .catch((error) => {
         console.error("タスク情報の取得に失敗:", error);
@@ -64,7 +59,6 @@ export default function Home() {
 
   return (
     <main className="home">
-
       {/* レベル */}
       <h1>
         Lv. <span id="level">{level}</span>
@@ -76,7 +70,7 @@ export default function Home() {
         <span id="studyTime">{studyTime}</span>
       </p>
 
-      {/* キャラの状態など */}
+      {/* キャラクターの状態 */}
       <p className="status">仮置き</p>
 
       {/* キャラクター */}
@@ -90,7 +84,9 @@ export default function Home() {
       {/* 勉強ボタン */}
       <button
         className="study-button"
-        onClick={() => navigate("/study")}
+        onClick={() => {
+          window.location.hash = "#/study";
+        }}
       >
         <img src="/images/study.png" alt="" />
         <span>勉強</span>
@@ -98,10 +94,11 @@ export default function Home() {
 
       {/* 下の3つのボタン */}
       <div className="menu-buttons">
-
         <button
           className="menu-button chat-button"
-          onClick={() => navigate("/chat")}
+          onClick={() => {
+            window.location.hash = "#/chat";
+          }}
         >
           <img src="/images/chat.png" alt="" />
           <span>チャット</span>
@@ -109,7 +106,9 @@ export default function Home() {
 
         <button
           className="menu-button map-button"
-          onClick={() => navigate("/map")}
+          onClick={() => {
+            window.location.hash = "#/map";
+          }}
         >
           <img src="/images/map.png" alt="" />
           <span>拠点</span>
@@ -117,14 +116,14 @@ export default function Home() {
 
         <button
           className="menu-button task-button"
-          onClick={() => navigate("/task")}
+          onClick={() => {
+            window.location.hash = "#/task";
+          }}
         >
           <img src="/images/task.png" alt="" />
           <span>タスク</span>
         </button>
-
       </div>
-
     </main>
   );
 }

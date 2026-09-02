@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "./study.css";
 
 const API_BASE = "";
 
 export default function Study() {
-  const navigate = useNavigate();
-
   // キャラクターID
   const [characterId, setCharacterId] = useState<string | null>(null);
 
@@ -219,7 +216,7 @@ export default function Study() {
   // ホームに戻る
   // --------------------------------
   const handleBack = () => {
-    navigate("/");
+    window.location.hash = "#/";
   };
 
   return (
@@ -275,17 +272,16 @@ export default function Study() {
       </p>
 
       {/* ホームに戻る */}
-      {/* 勉強していないときだけホームに戻るボタンを表示 */}
-{!isStudying && (
-  <button
-    className="study-back-button"
-    id="backButton"
-    onClick={handleBack}
-    disabled={isSaving}
-  >
-    ホームに戻る
-  </button>
-    )}
+      {!isStudying && (
+        <button
+          className="study-back-button"
+          id="backButton"
+          onClick={handleBack}
+          disabled={isSaving}
+        >
+          ホームに戻る
+        </button>
+      )}
 
     </main>
   );
