@@ -298,3 +298,18 @@ body {
         font-size: 15px;
     }
 }
+/* 経験値獲得などの一時メッセージ */
+.task-message {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background-color: #f3ecfb;
+    color: #4b0082;
+    font-weight: bold;
+    text-align: center;
+}
+
+.task-message.error {
+    background-color: #fde2e4;
+    color: #890e24;
+}
