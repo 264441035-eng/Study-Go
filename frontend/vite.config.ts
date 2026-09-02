@@ -7,6 +7,14 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // 本番はnginxが同一オリジンで/apiをバックエンドにプロキシしているので、
+    // 開発サーバーでも同じ挙動に揃える（VITE_API_URL未設定でも動くように）。
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
   },
 
   build: {
@@ -17,6 +25,7 @@ export default defineConfig({
         map: "map.html",
         task: "task.html",
         training: "training.html",
+        chat: "chat.html",
       },
     },
   },

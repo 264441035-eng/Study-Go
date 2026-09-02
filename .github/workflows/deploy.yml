@@ -34,6 +34,12 @@ jobs:
             container: frontend
             ecr: study-go-frontend
             context: ./frontend
+          - name: ai-tutor
+            service: study-go-ai-tutor
+            family: study-go-ai-tutor
+            container: ai-tutor
+            ecr: study-go-ai-tutor
+            context: ./ai-tutor-service
     steps:
       - uses: actions/checkout@v4
 
@@ -51,9 +57,19 @@ jobs:
         id: build
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
+          # HTTPリファラー制限をかけた公開用キー（秘密鍵ではない）。ビルド時に埋め込む。
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
         run: |
           IMAGE="$REGISTRY/${{ matrix.ecr }}:${{ github.sha }}"
-          docker build -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
+          BUILD_ARGS=()
+          if [ "${{ matrix.name }}" = "frontend" ]; then
+            BUILD_ARGS+=(--build-arg "VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY")
+            # backend/AI Tutor とも空文字 = 同一 ALB オリジンへ相対アクセスさせる。
+            # 未指定だと auth.ts/aiTutor.ts が localhost:8000 に落ち、ブラウザで Failed to fetch になる。
+            BUILD_ARGS+=(--build-arg "VITE_API_BASE_URL=")
+            BUILD_ARGS+=(--build-arg "VITE_AI_TUTOR_URL=")
+          fi
+          docker build "${BUILD_ARGS[@]}" -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
           docker push "$IMAGE"
           docker push "$REGISTRY/${{ matrix.ecr }}:latest"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
@@ -73,10 +89,56 @@ jobs:
           container-name: ${{ matrix.container }}
           image: ${{ steps.build.outputs.image }}
 
+      # ---- frontend など: そのまま deploy ----
       - name: Deploy to ECS
+        if: matrix.name != 'backend'
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
           service: ${{ matrix.service }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      # ---- backend: 新イメージの task def を登録 → スキーマ初期化を one-off タスクで先に実行 →
+      #      成功した場合のみ service を更新する（migration 失敗は deploy をブロック）----
+      - name: Register task definition (backend)
+        if: matrix.name == 'backend'
+        id: register
+        run: |
+          # render 出力から register 不可の読み取り専用フィールドを除去して登録
+          jq 'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)' \
+            "${{ steps.render.outputs.task-definition }}" > register.json
+          TD_ARN=$(aws ecs register-task-definition --cli-input-json file://register.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "td_arn=$TD_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Run DB migration as one-off task (backend)
+        if: matrix.name == 'backend'
+        run: |
+          # 実行中サービスと同じネットワーク構成(private subnet / SG)を流用する
+          NETCFG=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services ${{ matrix.service }} \
+            --query 'services[0].networkConfiguration' --output json)
+          TASK_ARN=$(aws ecs run-task --cluster "$ECS_CLUSTER" \
+            --task-definition "${{ steps.register.outputs.td_arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "$NETCFG" \
+            --overrides '{"containerOverrides":[{"name":"${{ matrix.container }}","command":["alembic","upgrade","head"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
+          echo "migration task: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+          EXIT=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+            --query "tasks[0].containers[?name=='${{ matrix.container }}'].exitCode | [0]" --output text)
+          echo "migration exitCode: $EXIT"
+          if [ "$EXIT" != "0" ]; then
+            REASON=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+              --query 'tasks[0].stoppedReason' --output text)
+            echo "::error::DB migration が失敗しました (exitCode=$EXIT, reason=$REASON)。deploy を中止します。"
+            exit 1
+          fi
+
+      - name: Deploy to ECS (backend)
+        if: matrix.name == 'backend'
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service ${{ matrix.service }} \
+            --task-definition "${{ steps.register.outputs.td_arn }}"
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services ${{ matrix.service }}

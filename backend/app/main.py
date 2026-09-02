@@ -3,13 +3,16 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import base, character, chat, encounter, task
+from app.routers import auth, base, character, chat, encounter, task
 
 app = FastAPI(title="Study-Go API")
 
 # フロントエンドのオリジンを環境変数で許可（カンマ区切り）
-_origins = "http://localhost:8081,http://localhost:5173"
-
+_default_origins = (
+    "http://localhost:5173,http://localhost:5174,http://localhost:5175,"
+    "http://localhost:3000"
+)
+_origins = os.getenv("CORS_ORIGINS", _default_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _origins.split(",") if o.strip()],
@@ -31,6 +34,7 @@ def hello() -> dict[str, str]:
 
 
 # 新機能は app/routers/ 配下にファイルを追加し、ここで include_router するだけでよい。
+app.include_router(auth.router)
 app.include_router(base.router)
 app.include_router(character.router)
 app.include_router(chat.router)

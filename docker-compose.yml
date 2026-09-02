@@ -1,26 +1,42 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: studygo
+      POSTGRES_USER: study_go
+      POSTGRES_PASSWORD: study_go
+      POSTGRES_DB: study_go
     ports:
       - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U study_go"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     environment:
+      # フロント(nginx:8080)からの同一オリジンプロキシ経由なのでCORSは基本不要だが、
+      # 直接叩く場合のために許可オリジンを設定。
       CORS_ORIGINS: "http://localhost:8081,http://localhost:5173"
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/studygo"
+      DATABASE_URL: "postgresql+psycopg2://study_go:study_go@db:5432/study_go"
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    depends_on:
-      - db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_GOOGLE_MAPS_API_KEY: "${VITE_GOOGLE_MAPS_API_KEY:-}"
     depends_on:
       - backend
     ports:
       - "8081:80"
+
+volumes:
+  db-data:

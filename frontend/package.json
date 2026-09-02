@@ -11,12 +11,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@types/google.maps": "^3.66.1",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
