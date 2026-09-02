@@ -284,6 +284,25 @@ def create_character(
     return to_character_out(created)
 
 
+@router.post("/initialize", summary="デモ用キャラクターを取得または作成")
+def initialize_demo_character(db: Session = Depends(get_db)) -> UUID:
+    """デモで使用する1体のキャラクターIDを返す。
+
+    - DBにキャラクターが1体以上あれば、先頭のキャラクターIDを返す。
+    - DBにキャラクターがなければ、名前が ``Demo Character`` のキャラクターを作成し、
+      作成されたキャラクターIDを返す。
+    - **出力**: キャラクターIDのUUID値。
+
+    ログインのないデモ版で、ホーム画面から使用するキャラクターを決定するためのAPI。
+    """
+    character = db.scalar(select(Character).order_by(Character.id).limit(1))
+    if character is not None:
+        return character.id
+
+    created = create_character(CharacterCreate(name="Demo Character"), db)
+    return created.id
+
+
 # 追加エンドポイント: 勉強時間を登録して育成状態を更新する。
 @router.post("/{character_id}/study", summary="勉強時間を登録")
 def record_study(
