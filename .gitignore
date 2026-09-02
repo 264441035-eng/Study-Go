@@ -14,6 +14,19 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
+# 仮想環境（.venv311 などの表記揺れも全て除外）
+.venv*
+venv/
+env/
+
+# ログファイル
+*.log
+
+# Pythonキャッシュ
+__pycache__/
+*.py[cod]
+
+
 # Terraform
 infra/.terraform/
 *.tfstate

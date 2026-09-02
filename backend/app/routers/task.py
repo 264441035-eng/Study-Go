@@ -1,8 +1,11 @@
 """タスク(task)機能に関するエンドポイント。
 
-新しい機能を追加するときは、この routers/ 配下に
-このファイルのような <機能名>.py を作成し、
-main.py で `app.include_router(...)` を1行追加するだけで良い。
+タスクの定義と完了状態は DB の tasks テーブルに保持する（既製タスクは
+Alembic のデータマイグレーションで投入。app.task_seed.DEFAULT_TASKS 参照）。
+ログイン機能が無いため、完了状態は全ユーザー共通のグローバルな値として扱う。
+リセットは「デモ用リセットAPI」を叩いたときだけ行い、毎日の自動リセットはしない。
+
+勉強セッション（開始時刻・今日の勉強秒数）は従来どおりメモリ保持のまま。
 """
 
 import os
@@ -13,9 +16,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models import Task
 from app.routers.base import credit_study_time_by_location
 from app.routers.character import (
     add_study_minutes_to_character,
@@ -141,64 +146,11 @@ class StudyTimeSendResponse(BaseModel):
 
 
 # =========================================================
-# デモ用タスク
+# 仮の保存場所（勉強セッション）
 # =========================================================
 
-
-_study_tasks: list[StudyTask] = [
-    StudyTask(
-        id=1,
-        title="30秒勉強する（デモ）",
-        minute=0.5,
-        required_level=1,
-        completion_mode=CompletionMode.AUTO_TIME,
-    ),
-    StudyTask(
-        id=2,
-        title="AIにやったことを説明する",
-        minute=None,
-        required_level=2,
-        completion_mode=CompletionMode.EXTERNAL,
-    ),
-    StudyTask(
-        id=3,
-        title="AIの問題に答える",
-        minute=None,
-        required_level=3,
-        completion_mode=CompletionMode.EXTERNAL,
-    ),
-]
-
-
-_exercise_tasks: list[ExerciseTask] = [
-    ExerciseTask(
-        id=101,
-        title="拠点まで徒歩で移動する",
-        required_level=1,
-        completion_mode=CompletionMode.EXTERNAL,
-    ),
-    ExerciseTask(
-        id=102,
-        title="散歩する",
-        required_level=1,
-        completion_mode=CompletionMode.MANUAL,
-    ),
-    ExerciseTask(
-        id=103,
-        title="スクワットする",
-        required_level=2,
-        completion_mode=CompletionMode.MANUAL,
-    ),
-]
-
-
-# =========================================================
-# 仮の保存場所
-# =========================================================
-
-# TODO:
-# 現在はメモリ保存。
-# DB導入後はDBへ置き換える。
+# 勉強セッション（開始時刻・今日の勉強記録）は従来どおりメモリ保持。
+# タスクの完了状態は DB(tasks.done) に移したため、ここでは扱わない。
 
 _study_records: list[StudyRecord] = []
 
@@ -216,8 +168,11 @@ def _now() -> datetime:
     return datetime.now(JST)
 
 
-def _reset_daily_status_if_needed() -> None:
-    """日付が変わったらタスク達成状態をリセットする。"""
+def _reset_daily_study_session_if_needed() -> None:
+    """日付が変わったら勉強セッションの開始状態をリセットする。
+
+    タスクの完了状態(tasks.done)はデモ用リセットでのみ戻すため、ここでは触れない。
+    """
 
     global _status_date
     global _study_started_at
@@ -226,12 +181,6 @@ def _reset_daily_status_if_needed() -> None:
 
     if today == _status_date:
         return
-
-    for task in _study_tasks:
-        task.done = False
-
-    for task in _exercise_tasks:
-        task.done = False
 
     _study_started_at = None
     _status_date = today
@@ -249,15 +198,54 @@ def _today_study_seconds() -> int:
     )
 
 
-def _apply_study_auto_completion() -> list[int]:
-    """勉強時間による自動タスク達成を判定する。"""
+def _parse_base_categories(raw: str) -> list[str]:
+    """カンマ区切りの base_categories 文字列をリストへ変換する。"""
+
+    return [c for c in (part.strip() for part in raw.split(",")) if c]
+
+
+def _to_study_task(task: Task) -> StudyTask:
+    return StudyTask(
+        id=task.id,
+        title=task.title,
+        minute=task.minute,
+        done=task.done,
+        required_level=task.required_level,
+        base_categories=_parse_base_categories(task.base_categories),
+        completion_mode=CompletionMode(task.completion_mode),
+    )
+
+
+def _to_exercise_task(task: Task) -> ExerciseTask:
+    return ExerciseTask(
+        id=task.id,
+        title=task.title,
+        done=task.done,
+        required_level=task.required_level,
+        base_categories=_parse_base_categories(task.base_categories),
+        completion_mode=CompletionMode(task.completion_mode),
+    )
+
+
+def _tasks_by_category(db: Session, category: str) -> list[Task]:
+    """カテゴリのタスクを id 昇順で取得する。"""
+
+    return list(
+        db.scalars(
+            select(Task).where(Task.category == category).order_by(Task.id)
+        ).all()
+    )
+
+
+def _apply_study_auto_completion(db: Session) -> list[int]:
+    """勉強時間による自動タスク達成を判定する（DBへ反映。commitは呼び出し元）。"""
 
     total_seconds = _today_study_seconds()
 
     completed_ids: list[int] = []
 
-    for task in _study_tasks:
-        if task.completion_mode != CompletionMode.AUTO_TIME:
+    for task in _tasks_by_category(db, "study"):
+        if task.completion_mode != CompletionMode.AUTO_TIME.value:
             continue
 
         if task.minute is None:
@@ -284,7 +272,7 @@ def _apply_study_auto_completion() -> list[int]:
 def get_today_study_time() -> StudyTimeSummary:
     """今日勉強した時間を返す。"""
 
-    _reset_daily_status_if_needed()
+    _reset_daily_study_session_if_needed()
 
     seconds = _today_study_seconds()
 
@@ -299,18 +287,12 @@ def get_today_study_time() -> StudyTimeSummary:
     "/context/study-status",
     response_model=list[TaskStatus],
 )
-def get_study_task_status() -> list[TaskStatus]:
+def get_study_task_status(db: Session = Depends(get_db)) -> list[TaskStatus]:
     """勉強タスクの達成状況を返す。"""
 
-    _reset_daily_status_if_needed()
-
     return [
-        TaskStatus(
-            id=task.id,
-            title=task.title,
-            done=task.done,
-        )
-        for task in _study_tasks
+        TaskStatus(id=task.id, title=task.title, done=task.done)
+        for task in _tasks_by_category(db, "study")
     ]
 
 
@@ -318,18 +300,12 @@ def get_study_task_status() -> list[TaskStatus]:
     "/context/exercise-status",
     response_model=list[TaskStatus],
 )
-def get_exercise_task_status() -> list[TaskStatus]:
+def get_exercise_task_status(db: Session = Depends(get_db)) -> list[TaskStatus]:
     """運動タスクの達成状況を返す。"""
 
-    _reset_daily_status_if_needed()
-
     return [
-        TaskStatus(
-            id=task.id,
-            title=task.title,
-            done=task.done,
-        )
-        for task in _exercise_tasks
+        TaskStatus(id=task.id, title=task.title, done=task.done)
+        for task in _tasks_by_category(db, "exercise")
     ]
 
 
@@ -348,7 +324,7 @@ def start_study() -> StudyStartResponse:
 
     global _study_started_at
 
-    _reset_daily_status_if_needed()
+    _reset_daily_study_session_if_needed()
 
     if _study_started_at is not None:
         raise HTTPException(
@@ -384,7 +360,7 @@ def send_study_time(
 
     global _study_started_at
 
-    _reset_daily_status_if_needed()
+    _reset_daily_study_session_if_needed()
 
     if _study_started_at is None:
         raise HTTPException(
@@ -401,7 +377,7 @@ def send_study_time(
 
     _study_started_at = None
 
-    completed_ids = _apply_study_auto_completion()
+    completed_ids = _apply_study_auto_completion(db)
 
     total_seconds = _today_study_seconds()
 
@@ -447,6 +423,29 @@ def send_study_time(
 # =========================================================
 
 
+def _list_tasks(
+    db: Session,
+    category: str,
+    level: int,
+    base_category: str | None,
+) -> list[Task]:
+    """レベル・拠点に応じて表示するタスクを絞り込む。"""
+
+    result: list[Task] = []
+
+    for task in _tasks_by_category(db, category):
+        if task.required_level > level:
+            continue
+
+        allowed = _parse_base_categories(task.base_categories)
+        if base_category is not None and allowed and base_category not in allowed:
+            continue
+
+        result.append(task)
+
+    return result
+
+
 @router.get(
     "/study",
     response_model=list[StudyTask],
@@ -454,27 +453,14 @@ def send_study_time(
 def list_study_tasks(
     level: int = 1,
     base_category: str | None = None,
+    db: Session = Depends(get_db),
 ) -> list[StudyTask]:
     """現在のレベル・拠点に応じた勉強タスクを返す。"""
 
-    _reset_daily_status_if_needed()
-
-    result: list[StudyTask] = []
-
-    for task in _study_tasks:
-        if task.required_level > level:
-            continue
-
-        if (
-            base_category is not None
-            and task.base_categories
-            and base_category not in task.base_categories
-        ):
-            continue
-
-        result.append(task)
-
-    return result
+    return [
+        _to_study_task(task)
+        for task in _list_tasks(db, "study", level, base_category)
+    ]
 
 
 @router.get(
@@ -484,27 +470,14 @@ def list_study_tasks(
 def list_exercise_tasks(
     level: int = 1,
     base_category: str | None = None,
+    db: Session = Depends(get_db),
 ) -> list[ExerciseTask]:
     """現在のレベル・拠点に応じた運動タスクを返す。"""
 
-    _reset_daily_status_if_needed()
-
-    result: list[ExerciseTask] = []
-
-    for task in _exercise_tasks:
-        if task.required_level > level:
-            continue
-
-        if (
-            base_category is not None
-            and task.base_categories
-            and base_category not in task.base_categories
-        ):
-            continue
-
-        result.append(task)
-
-    return result
+    return [
+        _to_exercise_task(task)
+        for task in _list_tasks(db, "exercise", level, base_category)
+    ]
 
 
 # =========================================================
@@ -525,7 +498,32 @@ def _award_task_completion_xp(db: Session) -> None:
     add_study_minutes_to_character(
         character, TASK_COMPLETION_XP_MINUTES, utc_now()
     )
+
+
+def _update_task_status(
+    db: Session,
+    category: str,
+    task_id: int,
+    done: bool,
+) -> Task:
+    """タスクの達成状況を変更する。未完了→完了のときだけXPを加算する。"""
+
+    task = db.scalar(
+        select(Task).where(Task.id == task_id, Task.category == category)
+    )
+    if task is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{category} task not found",
+        )
+
+    newly_completed = done and not task.done
+    task.done = done
+    if newly_completed:
+        _award_task_completion_xp(db)
     db.commit()
+    db.refresh(task)
+    return task
 
 
 @router.post(
@@ -543,20 +541,7 @@ def update_study_task_status(
     （完了→未完了に戻したり、既に完了済みのタスクを再送しても加算しない。）
     """
 
-    _reset_daily_status_if_needed()
-
-    for task in _study_tasks:
-        if task.id == task_id:
-            newly_completed = update.done and not task.done
-            task.done = update.done
-            if newly_completed:
-                _award_task_completion_xp(db)
-            return task
-
-    raise HTTPException(
-        status_code=404,
-        detail="Study task not found",
-    )
+    return _to_study_task(_update_task_status(db, "study", task_id, update.done))
 
 
 @router.post(
@@ -573,17 +558,37 @@ def update_exercise_task_status(
     未完了から完了に変わったときだけ、キャラへ経験値を加算する。
     """
 
-    _reset_daily_status_if_needed()
-
-    for task in _exercise_tasks:
-        if task.id == task_id:
-            newly_completed = update.done and not task.done
-            task.done = update.done
-            if newly_completed:
-                _award_task_completion_xp(db)
-            return task
-
-    raise HTTPException(
-        status_code=404,
-        detail="Exercise task not found",
+    return _to_exercise_task(
+        _update_task_status(db, "exercise", task_id, update.done)
     )
+
+
+# =========================================================
+# デモ用：タスクの完了状態をリセット
+# =========================================================
+
+
+class TaskResetResponse(BaseModel):
+    reset_count: int
+
+
+@router.post(
+    "/reset",
+    response_model=TaskResetResponse,
+    summary="タスクの完了状態をリセット（デモ用）",
+)
+def reset_tasks(db: Session = Depends(get_db)) -> TaskResetResponse:
+    """全タスクの完了状態(done)を未完了へ戻す。
+
+    デモで繰り返しタスク達成を見せるための機能。ログインが無いため
+    完了状態は全員共通で、このAPIを叩いたときだけ一括リセットする。
+    """
+
+    tasks = list(db.scalars(select(Task)).all())
+    count = 0
+    for task in tasks:
+        if task.done:
+            task.done = False
+            count += 1
+    db.commit()
+    return TaskResetResponse(reset_count=count)

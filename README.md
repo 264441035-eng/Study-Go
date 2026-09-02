@@ -26,9 +26,26 @@ infra/      Terraform（VPC / ECR / ALB / ECS Fargate / IAM / GitHub OIDC）
 docker compose up --build
 # フロント: http://localhost:8081
 # API:      http://localhost:8000/api/hello
+# DB管理画面(Adminer): http://localhost:8082
 ```
 
 フロントの nginx が `/api` をバックエンドへプロキシするため同一オリジンで動作する。
+
+### DBの中身をブラウザで見る（Adminer）
+
+`docker-compose.yml` に含まれる Adminer コンテナ経由で、DB の中身をブラウザで確認できる
+（ローカル確認専用で、本番環境（ECS）には含めていない）。
+
+1. `docker compose up -d adminer`（他のサービスも起動していない場合は `db` も併せて起動する）
+2. ブラウザで `http://localhost:8082` を開く
+3. ログイン画面で以下を入力する
+   - システム: `PostgreSQL`
+   - サーバ: `db`（未入力でも `ADMINER_DEFAULT_SERVER` によりデフォルトで入る）
+   - ユーザ名: `study_go`
+   - パスワード: `study_go`
+   - データベース: `study_go`
+4. ログイン後、左メニューのテーブル一覧（`bases` / `characters` / `tasks` など）から
+   任意のテーブルをクリックすると、データをテーブル形式で閲覧・編集できる。
 
 ### 個別に起動
 
