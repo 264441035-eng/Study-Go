@@ -82,6 +82,27 @@ async function startStudy(): Promise<void> {
 
 
 // =========================
+// 現在地取得
+// =========================
+
+// 拠点への勉強時間加算に使う現在地を取得する。
+// 取得できない・拒否された場合はnullを返し、位置情報なしで送信する。
+function getCurrentPosition(): Promise<GeolocationPosition | null> {
+    if (!navigator.geolocation) {
+        return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => resolve(position),
+            () => resolve(null),
+            { timeout: 5000 },
+        );
+    });
+}
+
+
+// =========================
 // 勉強終了
 // =========================
 
@@ -108,23 +129,34 @@ async function stopStudy(): Promise<void> {
     }
 
     // 勉強時間をバックエンドへ送信する。分単位で経験値（レベル）が上がる。
+    // 現在地が取れれば、最寄りの拠点（200m以内）にも勉強時間が加算される。
+    const position = await getCurrentPosition();
+
     try {
         const response = await fetch(
             `${API_BASE}/api/tasks/study/time`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ seconds: studiedSeconds }),
+                body: JSON.stringify({
+                    seconds: studiedSeconds,
+                    ...(position && {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    }),
+                }),
             },
         );
         if (!response.ok) {
             throw new Error(`study/time API error: ${response.status}`);
         }
+        const data = await response.json();
 
         const gainedMinutes = Math.floor(studiedSeconds / 60);
         if (gainedMinutes >= 1) {
-            statusElement.textContent =
-                `お疲れさま！${gainedMinutes}分ぶんの経験値を獲得！ホームで確認しよう`;
+            statusElement.textContent = data.matched_base_id
+                ? `お疲れさま！${gainedMinutes}分ぶんの経験値を獲得！拠点${data.base_leveled_up ? "もレベルアップ！" : "にも記録したよ"}`
+                : `お疲れさま！${gainedMinutes}分ぶんの経験値を獲得！ホームで確認しよう`;
         } else {
             statusElement.textContent =
                 "お疲れさま！（1分以上で経験値がたまるよ）";
