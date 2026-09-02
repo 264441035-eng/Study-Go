@@ -2,6 +2,9 @@
 node_modules/
 frontend/dist/
 npm-debug.log*
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
 
 # Python
 __pycache__/

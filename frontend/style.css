@@ -1,0 +1,248 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: #ffffff;
+    font-family: sans-serif;
+}
+
+/* 画面全体 */
+.home {
+    width: 100%;
+    max-width: 500px;
+    min-height: 100vh;
+
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* レベル */
+h1 {
+    margin: 0;
+    font-size: 32px;
+    text-align: center;
+}
+
+/* 勉強時間 */
+.study-time {
+    margin: 15px 0 0;
+    font-size: 20px;
+    text-align: center;
+}
+
+/* 仮置き */
+.status {
+    margin: 35px 0 10px;
+    font-size: 20px;
+}
+
+/* キャラクター */
+.character {
+    width: 220px;
+    height: 280px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+.character img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* 勉強ボタン */
+.study-button {
+    width: 90%;
+    max-width: 400px;
+    height: 100px;
+
+    border: 3px solid #a56de2;
+    border-radius: 25px;
+
+    background: linear-gradient(
+        135deg,
+        #b98bea,
+        #8e5bd4
+    );
+
+    color: white;
+
+    font-size: 32px;
+    font-weight: bold;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+
+    cursor: pointer;
+
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+
+    margin-bottom: 30px;
+
+    /* 追加 */
+    transition: transform 0.1s;
+}
+
+/* カーソルを合わせたとき */
+.study-button:hover {
+    transform: scale(1.05);
+}
+
+/* クリックしたとき */
+.study-button:active {
+    transform: scale(0.95);
+}
+
+.study-button img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.study-button span {
+    color: #4b0082;
+}
+
+/* 下の4つ */
+.menu-buttons {
+    width: 100%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 10px;
+}
+
+/* 丸いボタン */
+.menu-button {
+    width: 100px;
+    height: 100px;
+
+    border-radius: 50%;
+    border: 3px solid;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    cursor: pointer;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    transition: transform 0.1s;
+}
+
+.menu-button:hover {
+    transform: scale(1.05);
+}
+
+.menu-button:active {
+    transform: scale(0.95);
+}
+
+.menu-button img {
+    width: 55px;
+    height: 55px;
+    object-fit: contain;
+
+    margin-bottom: 3px;
+}
+
+/* チャット */
+.chat-button {
+    background-color: #ffe0e5;
+    border-color: #ef6d7a;
+}
+
+.chat-button span {
+    color: #890e24;
+}
+
+/* すれちがい */
+.pass-button {
+    background-color: #dceeff;
+    border-color: #4d9eea;
+}
+
+.pass-button span {
+    color: #1c008b;
+}
+
+/* タスク */
+.task-button {
+    background-color: #fff0d5;
+    border-color: #f0a33a;
+}
+
+.task-button span {
+    color: #f0863a;
+}
+
+/* マップ */
+.map-button {
+    background-color: #dff7ef;
+    border-color: #4dbb9b;
+}
+
+.map-button span {
+    color: #08976c;
+}
+
+/* スマホが小さい場合 */
+@media (max-width: 400px) {
+
+    .home {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    h1 {
+        font-size: 27px;
+    }
+
+    .study-time {
+        font-size: 17px;
+    }
+
+    .character {
+        width: 190px;
+        height: 240px;
+    }
+
+    /**ボタン**/
+
+    .study-button {
+        height: 85px;
+        font-size: 27px;
+    }
+
+    .menu-buttons {
+        gap: 6px;
+    }
+
+    .menu-button {
+        width: 78px;
+        height: 78px;
+        font-size: 12px;
+    }
+
+    .menu-button img {
+        width: 42px;
+        height: 42px;
+    }
+}
