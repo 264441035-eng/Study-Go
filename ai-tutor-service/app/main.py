@@ -4,11 +4,13 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import dev, sessions
 from app.config import DatabaseMode, get_settings
+from app.llm.interface import LLMError
 
 logger = logging.getLogger("ai_tutor")
 settings = get_settings()
@@ -43,6 +45,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(LLMError)
+async def _llm_error_handler(request: Request, exc: LLMError) -> JSONResponse:
+    # モデルアクセス未有効やスロットリング等。生の 500 でなく 503 で返す。
+    logger.error("LLM unavailable on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "AIモデルが一時的に利用できません。時間をおいて再度お試しください。"},
+    )
+
 
 app.include_router(sessions.router)
 app.include_router(dev.router)
