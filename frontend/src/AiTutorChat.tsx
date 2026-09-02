@@ -118,7 +118,7 @@ export default function AiTutorChat() {
             <div style={styles.report}>
               <h3 style={{ margin: "0 0 8px" }}>評価レポート</h3>
               <p style={{ margin: "4px 0" }}>
-                理解度スコア: <b>{result.score}</b> / 100　　獲得XP: <b>{result.xp}</b>
+                理解度スコア: <b>{result.score}</b> / 100&emsp;&emsp;獲得XP: <b>{result.xp}</b>
               </p>
               <p style={{ margin: "4px 0" }}>{result.summary}</p>
               <p style={{ margin: "8px 0 2px" }}><b>強み</b></p>
