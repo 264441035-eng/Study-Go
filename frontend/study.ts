@@ -173,7 +173,7 @@ async function stopStudy(): Promise<void> {
             if (shouldRegister) {
                 const { latitude, longitude } = position.coords;
                 window.location.href =
-                    `map.html?lat=${latitude}&lng=${longitude}`;
+                    `map.html?lat=${latitude}&lng=${longitude}&seconds=${studiedSeconds}`;
             }
         }
     } catch (error) {
