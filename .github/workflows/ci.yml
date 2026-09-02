@@ -7,6 +7,23 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # DB を使う機能のテストが増えるため、pytest を実 Postgres に対して実行する。
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: study_go
+          POSTGRES_PASSWORD: study_go
+          POSTGRES_DB: study_go
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U study_go"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://study_go:study_go@localhost:5432/study_go
     defaults:
       run:
         working-directory: backend
@@ -18,6 +35,8 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Lint (ruff)
         run: ruff check .
+      - name: Init schema (create tables)
+        run: python -m app.dbctl init-db
       - name: Test (pytest)
         run: pytest -q
 
