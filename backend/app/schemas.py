@@ -26,3 +26,7 @@ class BaseOut(BaseModel):
     latitude: Decimal
     longitude: Decimal
     created_at: datetime
+
+
+class BaseCountOut(BaseModel):
+    count: int

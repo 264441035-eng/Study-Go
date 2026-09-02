@@ -39,6 +39,9 @@ resource "aws_ecs_task_definition" "backend" {
         # 同一 ALB オリジンで配信するため CORS は基本不要だが、明示しておく
         { name = "CORS_ORIGINS", value = "http://${aws_lb.main.dns_name}" }
       ]
+      secrets = [
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
