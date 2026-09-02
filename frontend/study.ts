@@ -86,11 +86,13 @@ function stopStudy(): void {
     if (startTime === null) {
         return;
     }
-    const endTime = Date.now();
+    //const endTime = Date.now();
 
+    /*
     const studyTime = Math.floor(
         (endTime - startTime) / 1000
     );
+    */
     if (timerInterval !== null) {
         clearInterval(timerInterval);
         timerInterval = null;
