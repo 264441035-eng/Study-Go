@@ -81,9 +81,9 @@ export default function AiTutorChat() {
 
   return (
     <section style={styles.wrap}>
-      <h2 style={{ margin: "0 0 4px" }}>AI Tutor — 口頭試問</h2>
+      <h2 style={{ margin: "0 0 4px" }}>AIチューターと話す</h2>
       <p style={styles.hint}>
-        勉強した内容を説明すると、AIが理解度を確認する質問をします。3ターン以上で終了できます。
+        今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。
       </p>
 
       {!sessionId ? (
@@ -120,25 +120,38 @@ export default function AiTutorChat() {
             </div>
           ) : (
             <div style={styles.inputRow}>
-              <input
+              <textarea
                 style={styles.input}
                 value={input}
-                placeholder="回答を入力…"
+                rows={3}
+                placeholder="話したいことを入力…（Enterで改行 / ⌘・Ctrl+Enterで送信）"
                 disabled={loading || finished}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                onKeyDown={(e) => {
+                  // IME変換確定のEnterや通常のEnterでは送信しない。
+                  if (
+                    e.key === "Enter" &&
+                    (e.metaKey || e.ctrlKey) &&
+                    !e.nativeEvent.isComposing
+                  ) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
               />
-              <button style={styles.primary} onClick={handleSend} disabled={loading || !input.trim()}>
-                送信
-              </button>
-              <button
-                style={styles.finish}
-                onClick={handleFinish}
-                disabled={loading}
-                title={state === "ready_to_finish" ? "十分に確認できました" : undefined}
-              >
-                終了して評価
-              </button>
+              <div style={styles.buttonCol}>
+                <button style={styles.primary} onClick={handleSend} disabled={loading || !input.trim()}>
+                  送信
+                </button>
+                <button
+                  style={styles.finish}
+                  onClick={handleFinish}
+                  disabled={loading}
+                  title={state === "ready_to_finish" ? "十分に話せました" : undefined}
+                >
+                  終了して評価
+                </button>
+              </div>
             </div>
           )}
           {state === "ready_to_finish" && !result && (
@@ -169,8 +182,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#2563eb", color: "#fff", padding: "8px 12px",
     borderRadius: 12, maxWidth: "80%", whiteSpace: "pre-wrap",
   },
-  inputRow: { display: "flex", gap: 8, marginTop: 12 },
-  input: { flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc" },
+  inputRow: { display: "flex", gap: 8, marginTop: 12, alignItems: "stretch" },
+  input: {
+    flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid #ccc",
+    fontFamily: "inherit", fontSize: 14, resize: "vertical",
+  },
+  buttonCol: { display: "flex", flexDirection: "column", gap: 8 },
   primary: {
     padding: "8px 16px", borderRadius: 8, border: "none",
     background: "#2563eb", color: "#fff", cursor: "pointer",
