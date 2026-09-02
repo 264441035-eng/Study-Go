@@ -39,6 +39,10 @@ resource "aws_ecs_task_definition" "backend" {
         # 同一 ALB オリジンで配信するため CORS は基本不要だが、明示しておく
         { name = "CORS_ORIGINS", value = "http://${aws_lb.main.dns_name}" }
       ]
+      # 起動時 init_db() が接続する DB 接続文字列を SSM SecureString から注入（database.tf）
+      secrets = [
+        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
