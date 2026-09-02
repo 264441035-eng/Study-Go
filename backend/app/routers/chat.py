@@ -80,7 +80,15 @@ def _call_ai_tutor(
     with httpx.Client(base_url=AI_TUTOR_SERVICE_URL, timeout=_AI_TUTOR_TIMEOUT) as client:
         upstream = client.request(request.method, path, headers=headers, json=body)
 
-    return upstream.status_code, upstream.json()
+    # 上流が非JSON（ALB/nginx が返す 4xx/5xx の HTML など）を返すことがある。
+    # 例: /dev/token は本番では ai-tutor ではなく frontend の nginx に振られ、
+    # 405 の HTML が返る。そのまま .json() すると例外→500 になるので、
+    # JSON にできない場合は本文を detail に包み、ステータスはそのまま伝える。
+    try:
+        content: object = upstream.json()
+    except ValueError:
+        content = {"detail": upstream.text}
+    return upstream.status_code, content
 
 
 def _proxy_to_ai_tutor(request: Request, path: str, body: dict | None) -> JSONResponse:
