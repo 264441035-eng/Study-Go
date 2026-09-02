@@ -10,6 +10,10 @@ import {
   type FinishResponse,
 } from "./aiTutor";
 import { clearStoredToken, getStoredToken, login } from "./auth";
+import { appearanceForStage } from "../character";
+
+// 他画面（home.ts/map.ts）と同じ VITE_API_URL に統一。未設定時は同一オリジンの /api。
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 interface ChatMessage {
   role: "assistant" | "user";
@@ -19,6 +23,48 @@ interface ChatMessage {
 // ホームに戻る（MPA なので index.html へ遷移）。
 function goHome() {
   window.location.href = "index.html";
+}
+
+// チャット画面に表示する小さなキャラクター。
+// 進化前(PNG)は CSS で「ぴょこぴょこ」動かし、進化後(GIF)はそのまま再生する。
+// refreshKey が変わると進化段階を取り直す（チャット完了で経験値が増えた後など）。
+function ChatCharacter({ refreshKey }: { refreshKey: number }) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const initRes = await fetch(`${API_BASE}/api/characters/initialize`, {
+          method: "POST",
+        });
+        if (!initRes.ok) return;
+        const id = await initRes.json();
+        const res = await fetch(`${API_BASE}/api/characters/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && typeof data.evolution_stage === "number") {
+          setStage(data.evolution_stage);
+        }
+      } catch {
+        // キャラが取れなくてもチャットは使えるので、静かに諦める（進化前の絵のまま）。
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const appearance = appearanceForStage(stage);
+  return (
+    <div className="chat-character-wrap">
+      <img
+        className={`chat-character${appearance.bounce ? " is-bouncing" : ""}`}
+        src={appearance.src}
+        alt="あなたのキャラクター"
+      />
+    </div>
+  );
 }
 
 export default function AiTutorChat() {
@@ -33,6 +79,8 @@ export default function AiTutorChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FinishResponse | null>(null);
+  // 値が変わるとチャット画面のキャラの進化段階を取り直す。
+  const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,6 +162,8 @@ export default function AiTutorChat() {
     setLoading(true);
     try {
       setResult(await finishSession(token, sessionId));
+      // 経験値が増えてキャラが進化しているかもしれないので取り直す。
+      setCharacterRefreshKey((k) => k + 1);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -154,6 +204,7 @@ export default function AiTutorChat() {
       </header>
 
       <section className="chat-panel">
+        <ChatCharacter refreshKey={characterRefreshKey} />
         <h1>AIチューター</h1>
         <p className="chat-hint">
           今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。
@@ -183,13 +234,21 @@ export default function AiTutorChat() {
             {result ? (
               <div className="report">
                 <h3>評価レポート</h3>
+                {result.awarded_xp_minutes ? (
+                  <p className="xp-gain" role="status">
+                    🎉 経験値を <b>{result.awarded_xp_minutes}</b> 獲得！
+                    {result.leveled_up && result.character_level
+                      ? ` レベルが ${result.character_level} に上がったよ！`
+                      : " ホームで育ち具合をチェックしてみよう。"}
+                  </p>
+                ) : null}
                 <p style={{ margin: "4px 0" }}>
-                  理解度スコア: <b>{result.score}</b> / 100&emsp;&emsp;獲得XP: <b>{result.xp}</b>
+                  理解度スコア: <b>{result.score}</b> / 100
                 </p>
                 <p style={{ margin: "4px 0" }}>{result.summary}</p>
-                <p style={{ margin: "8px 0 2px" }}><b>強み</b></p>
+                <p style={{ margin: "8px 0 2px" }}><b>👍 いいところ</b></p>
                 <ul>{result.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
-                <p style={{ margin: "8px 0 2px" }}><b>弱点</b></p>
+                <p style={{ margin: "8px 0 2px" }}><b>💪 もう一歩</b></p>
                 <ul>{result.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
                 <button className="start-button" type="button" onClick={handleStart} style={{ marginTop: 12 }}>
                   もう一度

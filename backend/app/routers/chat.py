@@ -88,27 +88,38 @@ def _proxy_to_ai_tutor(request: Request, path: str, body: dict | None) -> JSONRe
     return JSONResponse(status_code=status_code, content=content)
 
 
-def _apply_chat_finish_xp(content: object, db: Session) -> None:
+def _apply_chat_finish_xp(content: object, db: Session) -> dict | None:
     """チャット完了レスポンスの xp をキャラの経験値（分換算）として加算する。
 
     ログインのないデモではDBの先頭の1体（なければ作成）へ加算する。
-    xp が取れない・0以下・変換後0分の場合は何もしない。
+    xp が取れない・0以下・変換後0分の場合は何もしない（None を返す）。
+
+    加算できた場合は、フロントが「経験値が増えた」ことを通知できるよう、
+    実際に付与した分数・加算後のレベル・レベルアップ有無・進化段階を返す。
     """
     if not isinstance(content, dict):
-        return
+        return None
 
     xp = content.get("xp")
     if not isinstance(xp, (int, float)) or xp <= 0:
-        return
+        return None
 
     divisor = CHAT_FINISH_XP_DIVISOR if CHAT_FINISH_XP_DIVISOR > 0 else 1
     minutes = round(xp / divisor)
     if minutes <= 0:
-        return
+        return None
 
     character = get_or_create_demo_character(db, for_update=True)
+    level_before = character.level
     add_study_minutes_to_character(character, minutes, utc_now())
     db.commit()
+
+    return {
+        "awarded_xp_minutes": minutes,
+        "character_level": character.level,
+        "leveled_up": character.level > level_before,
+        "evolution_stage": character.evolution_stage,
+    }
 
 
 @router.post("/dev/token")
@@ -141,6 +152,9 @@ def finish_ai_tutor_session(
         request, f"/sessions/{session_id}/finish", None
     )
     # 完了に成功したときだけ、得た xp をキャラの経験値へ反映する。
+    # 付与できたら、フロントが通知に使えるよう獲得分数・レベル情報を応答へ足す。
     if status_code == 200:
-        _apply_chat_finish_xp(content, db)
+        awarded = _apply_chat_finish_xp(content, db)
+        if awarded and isinstance(content, dict):
+            content = {**content, **awarded}
     return JSONResponse(status_code=status_code, content=content)

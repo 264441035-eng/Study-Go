@@ -24,6 +24,12 @@ export interface FinishResponse {
   strengths: string[];
   weaknesses: string[];
   xp: number;
+  // 自前バックエンド(chat.py)がキャラへ実際に付与した経験値情報。
+  // ai-tutor を直接叩いた場合や付与0のときは付かないので任意。
+  awarded_xp_minutes?: number;
+  character_level?: number;
+  leveled_up?: boolean;
+  evolution_stage?: number;
 }
 
 async function post<T>(path: string, token: string | null, body?: unknown): Promise<T> {
