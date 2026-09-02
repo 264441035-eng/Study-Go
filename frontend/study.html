@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勉強</title>
+
+    <link rel="stylesheet" href="study.css">
+</head>
+
+<body>
+
+    <main class="study-page">
+
+        <h1>勉強</h1>
+
+        <p id="status">勉強を始めよう！</p>
+
+        <div id="timer">00:00:00</div>
+
+        <button id="startButton" class="study-start-button">
+            勉強開始
+        </button>
+
+        <button id="stopButton" class="study-stop-button">
+            勉強終了
+        </button>
+
+        <p class="today-time">
+            今日の勉強時間：
+            <span id="todayTime">取得中...</span>
+        </p>
+
+        <button class="back-button" id="backButton">
+            ホームに戻る
+        </button>
+
+    </main>
+
+    <script type="module" src="./study.ts"></script>
+
+</body>
+</html>
