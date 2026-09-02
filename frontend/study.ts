@@ -164,6 +164,18 @@ async function stopStudy(): Promise<void> {
 
         // 今日の勉強時間を更新表示する。
         await loadTodayStudyTime();
+
+        // 現在地は取れたが拠点にマッチしなかった場合、その場を拠点登録できないか案内する。
+        if (position && !data.matched_base_id) {
+            const shouldRegister = window.confirm(
+                "拠点が登録されていません。現在地を拠点として登録しますか？",
+            );
+            if (shouldRegister) {
+                const { latitude, longitude } = position.coords;
+                window.location.href =
+                    `map.html?lat=${latitude}&lng=${longitude}`;
+            }
+        }
     } catch (error) {
         console.error("勉強時間の送信に失敗:", error);
         statusElement.textContent = "お疲れさま！（時間の記録に失敗しました）";
