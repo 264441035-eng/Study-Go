@@ -16,6 +16,11 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.routers.base import credit_study_time_by_location
+from app.routers.character import (
+    add_study_minutes_to_character,
+    get_or_create_demo_character,
+    utc_now,
+)
 
 JST = timezone(timedelta(hours=9))
 
@@ -401,6 +406,13 @@ def send_study_time(
     base_level: int | None = None
     base_leveled_up = False
 
+    # Characterは分単位で管理するため、1分未満の秒数は切り捨てる。
+    # ログインのないデモでは、DBの先頭の1体（なければ新規作成）へ加算する。
+    study_minutes = request.seconds // 60
+    if study_minutes > 0:
+        character = get_or_create_demo_character(db, for_update=True)
+        add_study_minutes_to_character(character, study_minutes, utc_now())
+
     if request.latitude is not None and request.longitude is not None:
         credited = credit_study_time_by_location(
             db, request.latitude, request.longitude, request.seconds
@@ -409,6 +421,8 @@ def send_study_time(
             base, base_leveled_up = credited
             matched_base_id = base.id
             base_level = base.level
+
+    db.commit()
 
     return StudyTimeSendResponse(
         session_seconds=request.seconds,
