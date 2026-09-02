@@ -108,6 +108,36 @@ h1 {
     object-fit: contain;
 }
 
+/* デモ用：レベルリセットボタン（控えめな見た目で誤操作を促さない） */
+.reset-button {
+    display: block;
+    margin: 12px auto 0;
+    border: 2px solid #b0b6c0;
+    background-color: #f2f4f7;
+    border-radius: 14px;
+    padding: 6px 14px;
+
+    color: #5b6472;
+    font-size: 12px;
+    font-weight: bold;
+
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.reset-button:hover {
+    transform: scale(1.03);
+}
+
+.reset-button:active {
+    transform: scale(0.96);
+}
+
+.reset-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* 勉強時間 */
 .study-time {
     margin: 15px 0 0;

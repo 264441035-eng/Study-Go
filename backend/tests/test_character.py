@@ -112,6 +112,37 @@ def test_record_study_rejects_non_positive_minutes() -> None:
     assert response.status_code == 422
 
 
+def test_reset_returns_character_to_initial_state() -> None:
+    created = client.post("/api/characters", json={"name": "Resetter"}).json()
+    minutes_to_level_10 = character_router.LEVEL_THRESHOLDS[9]
+    client.post(
+        f"/api/characters/{created['id']}/study",
+        json={"minutes": minutes_to_level_10},
+    )
+
+    response = client.post(f"/api/characters/{created['id']}/reset")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_study_minutes"] == 0
+    assert body["effective_study_minutes"] == 0
+    assert body["level"] == 1
+    assert body["highest_level"] == 1
+    assert body["minimum_level"] == 1
+    assert body["evolution_stage"] == 0
+    assert body["last_studied_at"] is None
+
+    fetched = client.get(f"/api/characters/{created['id']}")
+    assert fetched.json()["level"] == 1
+    assert fetched.json()["total_study_minutes"] == 0
+
+
+def test_reset_unknown_character_returns_404() -> None:
+    response = client.post(f"/api/characters/{uuid4()}/reset")
+
+    assert response.status_code == 404
+
+
 def test_study_time_reaches_evolution_level() -> None:
     created = client.post("/api/characters", json={"name": "Evolver"}).json()
     minutes_to_level_10 = character_router.LEVEL_THRESHOLDS[9]

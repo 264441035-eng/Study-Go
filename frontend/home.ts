@@ -12,6 +12,11 @@ const characterImage =
 const xpBarFill =
     document.getElementById("xpBarFill") as HTMLDivElement | null;
 const xpLabel = document.getElementById("xpLabel") as HTMLElement | null;
+const resetButton =
+    document.getElementById("resetButton") as HTMLButtonElement | null;
+
+// リセットボタンから使えるよう、現在のデモ用キャラクターIDを保持する。
+let currentCharacterId: string | null = null;
 
 // 進化段階に応じた状態メッセージ。
 function statusMessageForStage(stage: number): string {
@@ -65,6 +70,7 @@ async function loadCharacter(): Promise<void> {
             throw new Error(`initialize API error: ${initResponse.status}`);
         }
         const characterId: string = await initResponse.json();
+        currentCharacterId = characterId;
 
         // 取得したキャラクターの育成状態を取得する。
         const response = await fetch(
@@ -118,6 +124,43 @@ async function loadTodayStudyTime(): Promise<void> {
         studyTimeElement.textContent = "--";
     }
 }
+
+// =========================
+// デモ用：レベルを初期状態へリセット
+// =========================
+// リセットAPIを呼んだあと、レベル・経験値バー・今日の勉強時間を再描画する。
+async function resetCharacter(): Promise<void> {
+    if (currentCharacterId === null) {
+        return;
+    }
+    if (!window.confirm("レベルを初期状態（Lv.1）に戻します。よろしいですか？")) {
+        return;
+    }
+    if (resetButton !== null) {
+        resetButton.disabled = true;
+    }
+    try {
+        const response = await fetch(
+            `${API_BASE}/api/characters/${currentCharacterId}/reset`,
+            { method: "POST" },
+        );
+        if (!response.ok) {
+            throw new Error(`reset API error: ${response.status}`);
+        }
+        await Promise.all([loadCharacter(), loadTodayStudyTime()]);
+    } catch (error) {
+        console.error("レベルのリセットに失敗:", error);
+        if (statusElement !== null) {
+            statusElement.textContent = "リセットに失敗しました";
+        }
+    } finally {
+        if (resetButton !== null) {
+            resetButton.disabled = false;
+        }
+    }
+}
+
+resetButton?.addEventListener("click", resetCharacter);
 
 loadCharacter();
 loadTodayStudyTime();
