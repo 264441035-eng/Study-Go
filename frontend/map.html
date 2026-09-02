@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マップ</title>
+
+    <link rel="stylesheet" href="map.css">
+</head>
+
+<body>
+
+    <main class="map-page">
+
+        <h1>マップ</h1>
+
+        <p class="base-count">
+            登録した拠点：<span id="baseCount">取得中...</span>件
+        </p>
+
+        <div id="map"></div>
+
+        <p id="mapMessage" class="map-message"></p>
+
+        <button class="back-button" id="backButton">
+            ホームに戻る
+        </button>
+
+    </main>
+
+    <script type="module" src="./map.ts"></script>
+
+</body>
+</html>
