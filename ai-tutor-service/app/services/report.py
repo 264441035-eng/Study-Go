@@ -17,8 +17,8 @@ def _humanize_next_action(action: str | None) -> str:
     if not action:
         return ""
     mapping = {
-        "review_vertex_form": "平方完成と頂点形式の関係を整理して理解を深めましょう。",
-        "review": "関連する概念をもう一度確認しましょう。",
+        "review_vertex_form": "平方完成と頂点形式の関係を整理すると、もっとスッキリするはず！",
+        "review": "関連するところを、もう一回さらっと見直してみよう。",
     }
     return mapping.get(action, action)
 
@@ -26,14 +26,14 @@ def _humanize_next_action(action: str | None) -> str:
 def _build_comment(assessment: Assessment) -> str:
     parts: list[str] = []
     if assessment.strengths:
-        parts.append("・".join(assessment.strengths) + " は理解できています。")
+        parts.append("いいね！ " + "・".join(assessment.strengths) + " はしっかり理解できてるよ。")
     if assessment.weaknesses:
         weak = "・".join(assessment.weaknesses)
-        parts.append(f"次回は {weak} を確認しましょう。")
+        parts.append(f"あとは {weak} をちょっと見直すと、もっとバッチリ！")
     next_action = _humanize_next_action(assessment.recommended_next_action)
     if next_action:
         parts.append(next_action)
-    return " ".join(parts) or "お疲れさまでした。"
+    return " ".join(parts) or "今日もよくがんばったね、お疲れさま！"
 
 
 class ReportService:

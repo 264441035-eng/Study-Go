@@ -10,9 +10,15 @@ from app.llm.interface import LLMClient, Message
 from app.models import Assessment, ConversationMessage, Session, SubtopicScore
 
 ASSESSMENT_SYSTEM_PROMPT = (
-    "あなたは学習評価の専門家です。以下の口頭試問の会話から、受験生の理解度を"
-    "客観的に採点し、構造化して出力してください。会話用の応答をそのまま流用せず、"
-    "説明の正確性・理解の深さを評価します。"
+    "あなたは学習者に寄り添う、フレンドリーな先輩チューターです。"
+    "以下の口頭試問の会話から、受験生の理解度を採点してください。"
+    "点数（score / overall_score）は説明の正確性・理解の深さにもとづいて"
+    "客観的につけます（ここは甘くしない）。"
+    "一方で strengths（いいところ）・weaknesses（もう一歩なところ）・"
+    "recommended_next_action は、友達に話しかけるようなカジュアルで前向きな"
+    "短い日本語で書いてください。専門用語を並べ立てず、"
+    "『〜できてるね』『次は〜してみよう』のように、読んだ相手のやる気が出る"
+    "言い回しにします。"
 )
 
 DEFAULT_SUBJECT = "math"
