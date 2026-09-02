@@ -1,4 +1,3 @@
-import pytest
 
 from app.config import LLMMode, Settings
 from app.llm import Message, get_llm_client
@@ -14,9 +13,14 @@ def test_factory_returns_mock_for_mock_mode():
     assert isinstance(client, MockLLMClient)
 
 
-def test_factory_bedrock_not_implemented_yet():
-    with pytest.raises(NotImplementedError):
-        get_llm_client(Settings(llm_mode=LLMMode.bedrock))
+def test_factory_returns_bedrock_for_bedrock_mode():
+    # 実 API は呼ばない。ファクトリが Bedrock 実装を返すことだけ確認する。
+    from app.llm.bedrock import BedrockLLMClient
+
+    client = get_llm_client(
+        Settings(llm_mode=LLMMode.bedrock, conversation_model_id="dummy-model")
+    )
+    assert isinstance(client, BedrockLLMClient)
 
 
 def test_first_question_when_no_user_turns():

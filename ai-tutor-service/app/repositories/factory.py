@@ -27,14 +27,14 @@ def _memory_student_repo() -> StudentModelRepository:
 def get_session_repository(settings: Settings) -> SessionRepository:
     if settings.database_mode is DatabaseMode.memory:
         return _memory_session_repo()
-    raise NotImplementedError(
-        f"DynamoDB session repository ({settings.database_mode}) is added in a later PR"
-    )
+    from app.repositories.dynamodb import DynamoDBSessionRepository
+
+    return DynamoDBSessionRepository(settings)
 
 
 def get_student_model_repository(settings: Settings) -> StudentModelRepository:
     if settings.database_mode is DatabaseMode.memory:
         return _memory_student_repo()
-    raise NotImplementedError(
-        f"DynamoDB student-model repository ({settings.database_mode}) is added in a later PR"
-    )
+    from app.repositories.dynamodb import DynamoDBStudentModelRepository
+
+    return DynamoDBStudentModelRepository(settings)

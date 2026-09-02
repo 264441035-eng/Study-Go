@@ -10,6 +10,7 @@ def get_llm_client(settings: Settings) -> LLMClient:
 
         return MockLLMClient()
     if settings.llm_mode is LLMMode.bedrock:
-        # Bedrock 実装は後続 PR (計画 §6 step 8) で追加する。
-        raise NotImplementedError("bedrock LLM client is not implemented yet")
+        from app.llm.bedrock import BedrockLLMClient
+
+        return BedrockLLMClient(settings)
     raise ValueError(f"unknown LLM_MODE: {settings.llm_mode}")

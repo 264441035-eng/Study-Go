@@ -48,11 +48,11 @@ class Settings(BaseSettings):
     rag_mode: RAGMode = RAGMode.mock
 
     # --- Bedrock (LLM_MODE=bedrock のとき使用) ---
-    # モデルは pin する。リージョンでの availability / クロスリージョン Inference
-    # Profile は着手時に Bedrock コンソールで要確認 (計画 §1-③)。
-    bedrock_region: str = "us-east-1"
-    conversation_model_id: str = ""  # 会話 = Claude Haiku 4.5 系
-    assessment_model_id: str = ""  # 評価 = Claude Sonnet 5 系
+    # ap-northeast-1 で疎通確認済み (計画 §1-③)。組織の SCP が global.* /
+    # Sonnet 5 を explicit deny するため jp.* Inference Profile を pin。
+    bedrock_region: str = "ap-northeast-1"
+    conversation_model_id: str = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+    assessment_model_id: str = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
     # --- 認証 (JWT HS256, 既存backendと共有シークレット; 計画 §1-①) ---
     jwt_secret: str = "dev-insecure-secret-change-me"

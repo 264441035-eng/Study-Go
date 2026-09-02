@@ -1,6 +1,5 @@
 from datetime import date
 
-import pytest
 
 from app.config import DatabaseMode, Settings
 from app.models import Assessment, ConversationMessage, Role, Session
@@ -54,9 +53,19 @@ def test_student_model_upsert_get():
     assert repo.get_topic("u1", "math", "unknown") is None
 
 
-def test_factory_memory_and_not_implemented():
+def test_factory_selects_impl_by_mode():
+    from app.repositories.dynamodb import (
+        DynamoDBSessionRepository,
+        DynamoDBStudentModelRepository,
+    )
+
     assert get_session_repository(Settings(database_mode=DatabaseMode.memory)) is not None
-    with pytest.raises(NotImplementedError):
-        get_session_repository(Settings(database_mode=DatabaseMode.aws))
-    with pytest.raises(NotImplementedError):
-        get_student_model_repository(Settings(database_mode=DatabaseMode.local))
+    # DynamoDB 実装の選択 (boto3 resource 生成のみ; ネットワークアクセスはしない)。
+    assert isinstance(
+        get_session_repository(Settings(database_mode=DatabaseMode.aws)),
+        DynamoDBSessionRepository,
+    )
+    assert isinstance(
+        get_student_model_repository(Settings(database_mode=DatabaseMode.local)),
+        DynamoDBStudentModelRepository,
+    )
