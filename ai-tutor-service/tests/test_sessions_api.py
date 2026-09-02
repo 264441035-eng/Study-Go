@@ -86,3 +86,47 @@ def test_cannot_use_others_session():
         json={"message": "hi"},
     )
     assert resp.status_code == 403
+
+
+def test_finish_returns_assessment_and_report():
+    sid = _start()
+    client.post(f"/sessions/{sid}/messages", headers=HEADERS, json={"message": "二次関数"})
+    resp = client.post(f"/sessions/{sid}/finish", headers=HEADERS)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["session_id"] == sid
+    assert set(body.keys()) == {"session_id", "score", "summary", "strengths", "weaknesses", "xp"}
+    assert 0 <= body["score"] <= 100
+    assert body["xp"] >= 0
+    assert body["strengths"] and body["summary"]
+
+
+def test_finish_persists_assessment_and_student_model():
+    sid = _start()
+    client.post(f"/sessions/{sid}/finish", headers=HEADERS)
+    session_repo = factory.get_session_repository(get_settings())
+    student_repo = factory.get_student_model_repository(get_settings())
+    assert session_repo.get_assessment(sid) is not None
+    # Student Model に該当 topic が upsert されている (mock は quadratic_functions)。
+    topic = student_repo.get_topic("user123", "math", "quadratic_functions")
+    assert topic is not None
+    assert 0 <= topic["score"] <= 100
+
+
+def test_finish_is_idempotent_second_call_409():
+    sid = _start()
+    assert client.post(f"/sessions/{sid}/finish", headers=HEADERS).status_code == 200
+    # 二度目は finished なので 409。
+    assert client.post(f"/sessions/{sid}/finish", headers=HEADERS).status_code == 409
+
+
+def test_cannot_message_after_finish():
+    sid = _start()
+    client.post(f"/sessions/{sid}/finish", headers=HEADERS)
+    resp = client.post(f"/sessions/{sid}/messages", headers=HEADERS, json={"message": "hi"})
+    assert resp.status_code == 409
+
+
+def test_finish_requires_auth():
+    sid = _start()
+    assert client.post(f"/sessions/{sid}/finish").status_code == 401

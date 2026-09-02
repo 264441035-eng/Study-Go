@@ -6,20 +6,32 @@ POST /sessions/{id}/finish         … 終了 (Assessment/Report は後続PRで�
 すべて JWT 必須。user_id は JWT から取得しボディの user_id は使わない。
 """
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_conversation_service, get_session_repo
+from app.api.deps import (
+    get_assessment_service,
+    get_conversation_service,
+    get_report_service,
+    get_session_repo,
+    get_student_model_service,
+)
 from app.auth import get_current_user_id
 from app.config import Settings, get_settings
 from app.models import ConversationMessage, Role, Session, SessionStatus
 from app.models.api import (
+    FinishResponse,
     SendMessageRequest,
     SendMessageResponse,
     StartSessionResponse,
 )
 from app.repositories import SessionRepository
 from app.services import limits
+from app.services.assessment import DEFAULT_SUBJECT, AssessmentService
 from app.services.conversation import ConversationService
+from app.services.report import ReportService
+from app.services.student_model import StudentModelService
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -79,3 +91,35 @@ def send_message(
         ConversationMessage(session_id=session_id, role=Role.assistant, content=text)
     )
     return SendMessageResponse(message=text, state=state)
+
+
+@router.post("/{session_id}/finish", response_model=FinishResponse)
+def finish_session(
+    session_id: str,
+    user_id: str = Depends(get_current_user_id),
+    repo: SessionRepository = Depends(get_session_repo),
+    assessor: AssessmentService = Depends(get_assessment_service),
+    student: StudentModelService = Depends(get_student_model_service),
+    reporter: ReportService = Depends(get_report_service),
+) -> FinishResponse:
+    session = _load_owned_active_session(repo, session_id, user_id)
+    history = repo.get_messages(session_id)
+
+    assessment = assessor.assess(session, history)
+    repo.save_assessment(assessment)
+    student.apply(user_id, session.subject or DEFAULT_SUBJECT, assessment)
+    report = reporter.build(session, assessment)
+
+    # finish は一度きり。二重 finish は _load_owned_active_session が 409 で弾く。
+    session.status = SessionStatus.finished
+    session.finished_at = datetime.now(timezone.utc)
+    repo.update_session(session)
+
+    return FinishResponse(
+        session_id=session_id,
+        score=assessment.overall_score,
+        summary=report.comment,
+        strengths=assessment.strengths,
+        weaknesses=assessment.weaknesses,
+        xp=report.xp,
+    )

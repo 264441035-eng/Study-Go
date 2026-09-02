@@ -11,7 +11,10 @@ from app.repositories import (
     get_session_repository,
     get_student_model_repository,
 )
+from app.services.assessment import AssessmentService
 from app.services.conversation import ConversationService
+from app.services.report import ReportService
+from app.services.student_model import StudentModelService
 
 
 def get_llm(settings: Settings = Depends(get_settings)) -> LLMClient:
@@ -33,3 +36,20 @@ def get_conversation_service(
     settings: Settings = Depends(get_settings),
 ) -> ConversationService:
     return ConversationService(llm, settings)
+
+
+def get_assessment_service(
+    llm: LLMClient = Depends(get_llm),
+    settings: Settings = Depends(get_settings),
+) -> AssessmentService:
+    return AssessmentService(llm, settings)
+
+
+def get_student_model_service(
+    repo: StudentModelRepository = Depends(get_student_repo),
+) -> StudentModelService:
+    return StudentModelService(repo)
+
+
+def get_report_service() -> ReportService:
+    return ReportService()
