@@ -7,6 +7,7 @@ Session API・Conversation・Assessment 等は後続の stacked PR で追加す�
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import sessions
 from app.config import get_settings
 
 settings = get_settings()
@@ -20,6 +21,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(sessions.router)
 
 
 @app.get("/health")
