@@ -150,10 +150,18 @@ body {
 }
 
 .base-info-category {
-    margin: 4px 0 10px;
+    margin: 4px 0;
 
     font-size: 13px;
     color: #888888;
+}
+
+.base-info-stats {
+    margin: 0 0 10px;
+
+    font-size: 13px;
+    font-weight: bold;
+    color: #9b6bd3;
 }
 
 .base-info-delete-button {

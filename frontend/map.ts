@@ -34,6 +34,8 @@ interface Base {
     category: string;
     latitude: string;
     longitude: string;
+    total_study_seconds: number;
+    level: number;
 }
 
 interface LatLng {
@@ -63,6 +65,9 @@ const submitButton = document.getElementById("submitButton") as HTMLButtonElemen
 let map: google.maps.Map | undefined;
 let baseMarkers: google.maps.Marker[] = [];
 let infoWindow: google.maps.InfoWindow | undefined;
+// ホバーで開いただけの吹き出しはmouseoutで自動的に閉じるが、
+// クリックで開いた（削除ボタン付きの）吹き出しは開いたままにしておく。
+let infoWindowMode: "hover" | "click" | null = null;
 
 // 「拠点を登録」ボタンを押してから地図をクリックするまでの間だけtrue。
 let isRegistering = false;
@@ -129,6 +134,7 @@ async function handleDeleteBase(base: Base): Promise<void> {
     }
 
     infoWindow?.close();
+    infoWindowMode = null;
 
     try {
         await deleteBase(base.id);
@@ -136,6 +142,39 @@ async function handleDeleteBase(base: Base): Promise<void> {
     } catch (error) {
         showMessage(error instanceof Error ? error.message : "拠点の削除に失敗しました", true);
     }
+}
+
+function formatStudyDuration(totalSeconds: number): string {
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours === 0 ? `${minutes}分` : `${hours}時間${minutes}分`;
+}
+
+function buildBaseStatsElement(base: Base): HTMLParagraphElement {
+    const stats = document.createElement("p");
+    stats.className = "base-info-stats";
+    stats.textContent = `Lv.${base.level}・累計 ${formatStudyDuration(base.total_study_seconds)}`;
+    return stats;
+}
+
+function buildHoverContent(base: Base): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "base-info-window";
+
+    const title = document.createElement("p");
+    title.className = "base-info-title";
+    title.textContent = base.name;
+    container.appendChild(title);
+
+    const category = document.createElement("p");
+    category.className = "base-info-category";
+    category.textContent = CATEGORY_LABELS[base.category] ?? base.category;
+    container.appendChild(category);
+
+    container.appendChild(buildBaseStatsElement(base));
+
+    return container;
 }
 
 function buildInfoWindowContent(base: Base): HTMLElement {
@@ -151,6 +190,8 @@ function buildInfoWindowContent(base: Base): HTMLElement {
     category.className = "base-info-category";
     category.textContent = CATEGORY_LABELS[base.category] ?? base.category;
     container.appendChild(category);
+
+    container.appendChild(buildBaseStatsElement(base));
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
@@ -177,6 +218,7 @@ function createPinIcon(color: string): google.maps.Symbol {
 
 function clearBaseMarkers(): void {
     infoWindow?.close();
+    infoWindowMode = null;
 
     for (const marker of baseMarkers) {
         marker.setMap(null);
@@ -226,12 +268,33 @@ function renderBases(bases: Base[]): void {
             icon: createPinIcon(CATEGORY_PIN_COLORS[base.category] ?? DEFAULT_PIN_COLOR),
         });
 
-        marker.addListener("click", () => {
-            if (!infoWindow) {
-                infoWindow = new google.maps.InfoWindow();
+        if (!infoWindow) {
+            infoWindow = new google.maps.InfoWindow();
+            infoWindow.addListener("closeclick", () => {
+                infoWindowMode = null;
+            });
+        }
+
+        marker.addListener("mouseover", () => {
+            if (infoWindowMode === "click") {
+                return;
             }
-            infoWindow.setContent(buildInfoWindowContent(base));
-            infoWindow.open({ map, anchor: marker });
+            infoWindow!.setContent(buildHoverContent(base));
+            infoWindow!.open({ map, anchor: marker });
+            infoWindowMode = "hover";
+        });
+
+        marker.addListener("mouseout", () => {
+            if (infoWindowMode === "hover") {
+                infoWindow!.close();
+                infoWindowMode = null;
+            }
+        });
+
+        marker.addListener("click", () => {
+            infoWindow!.setContent(buildInfoWindowContent(base));
+            infoWindow!.open({ map, anchor: marker });
+            infoWindowMode = "click";
         });
 
         baseMarkers.push(marker);
