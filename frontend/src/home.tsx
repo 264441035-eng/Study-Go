@@ -100,14 +100,6 @@ export default function Home() {
           <span>タスク</span>
         </button>
 
-        <button
-          className="menu-button pass-button"
-          onClick={() => navigate("/pass")}
-        >
-          <img src="/images/pass.png" alt="" />
-          <span>すれちがい</span>
-        </button>
-
       </div>
 
     </main>

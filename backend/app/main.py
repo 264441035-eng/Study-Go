@@ -8,7 +8,8 @@ from app.routers import base, character, chat, encounter, task
 app = FastAPI(title="Study-Go API")
 
 # フロントエンドのオリジンを環境変数で許可（カンマ区切り）
-_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+_origins = "http://localhost:8081,http://localhost:5173"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _origins.split(",") if o.strip()],
