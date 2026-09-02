@@ -34,6 +34,12 @@ jobs:
             container: frontend
             ecr: study-go-frontend
             context: ./frontend
+          - name: ai-tutor
+            service: study-go-ai-tutor
+            family: study-go-ai-tutor
+            container: ai-tutor
+            ecr: study-go-ai-tutor
+            context: ./ai-tutor-service
     steps:
       - uses: actions/checkout@v4
 
