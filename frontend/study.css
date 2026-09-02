@@ -1,0 +1,213 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: #ffffff;
+    font-family: sans-serif;
+}
+
+
+/* =========================
+   勉強ページ全体
+   ========================= */
+
+.study-page {
+    width: 100%;
+    max-width: 500px;
+    min-height: 100vh;
+
+    margin: 0 auto;
+    padding: 40px 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    text-align: center;
+}
+
+
+/* =========================
+   タイトル
+   ========================= */
+
+.study-page h1 {
+    margin: 0 0 30px;
+
+    font-size: 36px;
+}
+
+
+/* =========================
+   状態
+   ========================= */
+
+#status {
+    margin: 0 0 20px;
+
+    font-size: 24px;
+    font-weight: bold;
+}
+
+
+/* =========================
+   タイマー
+   ========================= */
+
+#timer {
+    margin-bottom: 40px;
+
+    font-size: 56px;
+    font-weight: bold;
+
+    letter-spacing: 3px;
+}
+
+
+/* =========================
+   勉強開始ボタン
+   ========================= */
+
+.study-start-button {
+    width: 80%;
+    max-width: 350px;
+    height: 80px;
+
+    border: none;
+    border-radius: 20px;
+
+    background-color: #9b6bd3;
+    color: white;
+
+    font-size: 26px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.study-start-button:hover {
+    transform: scale(1.05);
+}
+
+.study-start-button:active {
+    transform: scale(0.95);
+}
+
+
+/* =========================
+   勉強終了ボタン
+   ========================= */
+
+.study-stop-button {
+    width: 80%;
+    max-width: 350px;
+    height: 60px;
+
+    margin-top: 15px;
+
+    border: none;
+    border-radius: 15px;
+
+    background-color: #dddddd;
+    color: #555555;
+
+    font-size: 20px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+/* 勉強中だけ表示 */
+.study-stop-button.show {
+    display: block;
+}
+
+.study-stop-button:not(:disabled):hover {
+    transform: scale(1.05);
+}
+
+.study-stop-button:not(:disabled):active {
+    transform: scale(0.95);
+}
+
+.study-stop-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* =========================
+   今日の勉強時間
+   ========================= */
+
+.today-time {
+    margin-top: 40px;
+
+    font-size: 20px;
+}
+
+
+/* =========================
+   ホームボタン
+   ========================= */
+
+.back-button {
+    margin-top: 30px;
+
+    padding: 12px 25px;
+
+    border: none;
+    border-radius: 10px;
+
+    background-color: #eeeeee;
+    color: #333333;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.back-button:hover {
+    transform: scale(1.05);
+}
+
+.back-button:active {
+    transform: scale(0.95);
+}
+
+
+/* =========================
+   小さいスマホ
+   ========================= */
+
+@media (max-width: 400px) {
+
+    .study-page {
+        padding: 30px 15px;
+    }
+
+    .study-page h1 {
+        font-size: 30px;
+    }
+
+    #status {
+        font-size: 21px;
+    }
+
+    #timer {
+        font-size: 44px;
+    }
+
+    .study-start-button {
+        height: 70px;
+        font-size: 23px;
+    }
+}

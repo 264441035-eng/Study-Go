@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
+# Google Maps表示に使うAPIキー。ビルド時に埋め込まれる（秘密鍵ではなく、
+# Google Cloud側でHTTPリファラー制限をかけた上で公開される前提のキー）。
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 RUN npm run build
 
 # --- runtime stage ---
