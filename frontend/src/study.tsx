@@ -275,14 +275,17 @@ export default function Study() {
       </p>
 
       {/* ホームに戻る */}
-      <button
-        className="study-back-button"
-        id="backButton"
-        onClick={handleBack}
-        disabled={isSaving}
-      >
-        ホームに戻る
-      </button>
+      {/* 勉強していないときだけホームに戻るボタンを表示 */}
+{!isStudying && (
+  <button
+    className="study-back-button"
+    id="backButton"
+    onClick={handleBack}
+    disabled={isSaving}
+  >
+    ホームに戻る
+  </button>
+    )}
 
     </main>
   );

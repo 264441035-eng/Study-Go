@@ -5,7 +5,7 @@ import "./style.css";
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 // テスト用：実際のキャラクターIDに変更
-const characterId = "ここにキャラクターID";
+const characterId = "aae96c9c-bf1c-4a97-bf29-ab69e7674df8";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,12 +13,12 @@ export default function Home() {
   const [studyTime, setStudyTime] = useState("取得中...");
   const [level, setLevel] = useState("取得中...");
 
-  // キャラクター情報をAPIから取得
+  // キャラクター情報からレベルを取得
   useEffect(() => {
     fetch(`${API_BASE}/api/characters/${characterId}`)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
+          throw new Error(`Character API error: ${response.status}`);
         }
 
         return response.json();
@@ -26,17 +26,40 @@ export default function Home() {
       .then((data) => {
         console.log("Character API:", data);
 
-        // 累計勉強時間
-        setStudyTime(data.total_study_time);
-
         // レベル
-        setLevel(data.level);
+        setLevel(String(data.level));
       })
-        .catch((error) => {
+      .catch((error) => {
         console.error("キャラクター情報の取得に失敗:", error);
-        setStudyTime("00:00");
         setLevel("1");
-        });
+      });
+  }, []);
+
+  // Task APIから勉強時間を取得
+  useEffect(() => {
+    fetch(`${API_BASE}/api/tasks`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Task API error: ${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Task API:", data);
+
+        // TODO:
+        // Task APIの仕様が決まったら、
+        // ここで勉強時間を取得する。
+        //
+        // 例：
+        // setStudyTime(data.total_study_time);
+
+      })
+      .catch((error) => {
+        console.error("タスク情報の取得に失敗:", error);
+        setStudyTime("00:00");
+      });
   }, []);
 
   return (
@@ -73,7 +96,7 @@ export default function Home() {
         <span>勉強</span>
       </button>
 
-      {/* 下の4つのボタン */}
+      {/* 下の3つのボタン */}
       <div className="menu-buttons">
 
         <button
