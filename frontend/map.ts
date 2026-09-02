@@ -532,6 +532,30 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
     }
 }
 
+// 勉強終了画面などから「?lat=..&lng=..」付きで遷移してきた場合、
+// その場所にピンを指した状態で登録フォームを開く。
+function applyPendingLocationFromQuery(): void {
+    const params = new URLSearchParams(window.location.search);
+    const paramLat = params.get("lat");
+    const paramLng = params.get("lng");
+    if (paramLat === null || paramLng === null) {
+        return;
+    }
+
+    const location = { lat: Number(paramLat), lng: Number(paramLng) };
+    if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+        return;
+    }
+
+    enterRegisterMode();
+    setPendingLocation(location);
+    map!.setCenter(location);
+    map!.setZoom(15);
+
+    // 再読み込みやブラウザバックで登録モードが再発火しないようURLから消す。
+    window.history.replaceState({}, "", window.location.pathname);
+}
+
 startRegisterButton.addEventListener("click", enterRegisterMode);
 cancelRegisterButton.addEventListener("click", exitRegisterMode);
 useCurrentLocationButton.addEventListener("click", fillCurrentLocation);
@@ -566,6 +590,7 @@ async function initPage(): Promise<void> {
 
     await refreshBases();
     void showCurrentLocationCharacter();
+    applyPendingLocationFromQuery();
 }
 
 initPage();
