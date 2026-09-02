@@ -74,7 +74,7 @@ class Settings(BaseSettings):
 
     # --- コストの蓋 (計画 §1-③) ---
     max_turns: int = 10
-    max_sessions_per_day: int = 20
+    max_sessions_per_day: int = 100
     max_message_chars: int = 2000
 
     # --- CORS ---
