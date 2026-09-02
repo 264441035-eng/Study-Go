@@ -1,0 +1,380 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: #ffffff;
+    font-family: sans-serif;
+}
+
+
+/* =========================
+   マップページ全体
+   ========================= */
+
+.map-page {
+    width: 100%;
+    max-width: 500px;
+    min-height: 100vh;
+
+    margin: 0 auto;
+    padding: 40px 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    text-align: center;
+}
+
+
+/* =========================
+   タイトル
+   ========================= */
+
+.map-page h1 {
+    margin: 0 0 20px;
+
+    font-size: 36px;
+}
+
+
+/* =========================
+   拠点数
+   ========================= */
+
+.base-count {
+    margin: 0 0 20px;
+
+    font-size: 18px;
+    font-weight: bold;
+}
+
+
+/* =========================
+   拠点登録トリガーボタン
+   ========================= */
+
+.primary-button {
+    width: 100%;
+
+    margin-bottom: 15px;
+    padding: 14px;
+
+    border: none;
+    border-radius: 15px;
+
+    background-color: #9b6bd3;
+    color: white;
+
+    font-size: 17px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.primary-button:hover {
+    transform: scale(1.02);
+}
+
+.primary-button:active {
+    transform: scale(0.98);
+}
+
+
+/* =========================
+   地図クリックの案内
+   ========================= */
+
+.map-hint {
+    margin: 0 0 12px;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #9b6bd3;
+}
+
+
+/* =========================
+   地図
+   ========================= */
+
+#map {
+    width: 100%;
+    height: 350px;
+
+    border-radius: 20px;
+
+    background-color: #eeeeee;
+}
+
+#map.placing {
+    cursor: crosshair;
+}
+
+
+/* =========================
+   案内・エラーメッセージ
+   ========================= */
+
+.map-message {
+    min-height: 1.2em;
+    margin: 15px 0 0;
+
+    font-size: 14px;
+    color: #888888;
+}
+
+.map-message.error {
+    color: #d9534f;
+}
+
+
+/* =========================
+   ピンをクリックした時の吹き出し
+   ========================= */
+
+.base-info-window {
+    padding: 4px 2px;
+    text-align: left;
+}
+
+.base-info-title {
+    margin: 0;
+
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.base-info-category {
+    margin: 4px 0 10px;
+
+    font-size: 13px;
+    color: #888888;
+}
+
+.base-info-delete-button {
+    padding: 6px 14px;
+
+    border: 1px solid #d9534f;
+    border-radius: 8px;
+
+    background-color: #ffffff;
+    color: #d9534f;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.base-info-delete-button:hover {
+    background-color: #d9534f;
+    color: #ffffff;
+}
+
+
+/* =========================
+   拠点登録フォーム
+   ========================= */
+
+.base-form {
+    width: 100%;
+    margin-top: 30px;
+
+    padding: 20px;
+
+    border-radius: 20px;
+    background-color: #f7f5fb;
+
+    text-align: left;
+}
+
+.base-form h2 {
+    margin: 0 0 15px;
+
+    font-size: 20px;
+    text-align: center;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+
+    margin-bottom: 15px;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #555555;
+}
+
+.form-field input,
+.form-field select {
+    margin-top: 6px;
+
+    padding: 10px 12px;
+
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+
+    font-size: 16px;
+    font-weight: normal;
+    color: #333333;
+}
+
+.selected-location {
+    margin: 0 0 12px;
+
+    padding: 10px 12px;
+
+    border-radius: 10px;
+    background-color: #ffffff;
+
+    font-size: 14px;
+    font-weight: bold;
+    color: #888888;
+}
+
+.selected-location.selected {
+    color: #333333;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.form-buttons .secondary-button,
+.form-buttons .submit-button {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.secondary-button {
+    width: 100%;
+
+    margin-bottom: 12px;
+    padding: 10px;
+
+    border: 1px solid #9b6bd3;
+    border-radius: 10px;
+
+    background-color: #ffffff;
+    color: #9b6bd3;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.secondary-button:hover {
+    transform: scale(1.02);
+}
+
+.secondary-button:active {
+    transform: scale(0.98);
+}
+
+.submit-button {
+    width: 100%;
+
+    padding: 12px;
+
+    border: none;
+    border-radius: 10px;
+
+    background-color: #9b6bd3;
+    color: white;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.submit-button:hover {
+    transform: scale(1.02);
+}
+
+.submit-button:active {
+    transform: scale(0.98);
+}
+
+.submit-button:disabled,
+.secondary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.form-message {
+    min-height: 1.2em;
+    margin: 12px 0 0;
+
+    font-size: 14px;
+    color: #5cb85c;
+    text-align: center;
+}
+
+.form-message.error {
+    color: #d9534f;
+}
+
+
+/* =========================
+   ホームボタン
+   ========================= */
+
+.back-button {
+    margin-top: 30px;
+
+    padding: 12px 25px;
+
+    border: none;
+    border-radius: 10px;
+
+    background-color: #eeeeee;
+    color: #333333;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition: transform 0.1s;
+}
+
+.back-button:hover {
+    transform: scale(1.05);
+}
+
+.back-button:active {
+    transform: scale(0.95);
+}
+
+
+/* =========================
+   小さいスマホ
+   ========================= */
+
+@media (max-width: 400px) {
+
+    .map-page {
+        padding: 30px 15px;
+    }
+
+    .map-page h1 {
+        font-size: 30px;
+    }
+
+    #map {
+        height: 280px;
+    }
+}
