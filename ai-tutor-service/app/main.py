@@ -1,18 +1,40 @@
-"""AI Tutor Service エントリポイント。
+"""AI Tutor Service エントリポイント。"""
 
-Phase1 skeleton: FastAPI アプリと /health のみ。
-Session API・Conversation・Assessment 等は後続の stacked PR で追加する。
-"""
+import logging
+import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import dev, sessions
-from app.config import get_settings
+from app.config import DatabaseMode, get_settings
 
+logger = logging.getLogger("ai_tutor")
 settings = get_settings()
 
-app = FastAPI(title="AI Tutor Service")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # local (DynamoDB Local) はテーブルを自動作成する。aws は Terraform 管理なので触らない。
+    if settings.database_mode is DatabaseMode.local:
+        from app.repositories.dynamodb import ensure_tables
+
+        last_err: Exception | None = None
+        for _ in range(15):
+            try:
+                ensure_tables(settings)
+                logger.info("DynamoDB Local tables ready")
+                break
+            except Exception as e:  # noqa: BLE001 - 起動待ちをリトライ
+                last_err = e
+                time.sleep(1)
+        else:
+            raise RuntimeError(f"could not ensure DynamoDB tables: {last_err}")
+    yield
+
+
+app = FastAPI(title="AI Tutor Service", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
