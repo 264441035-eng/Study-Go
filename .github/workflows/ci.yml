@@ -42,7 +42,7 @@ jobs:
 
   # ユニットテスト(in-memory)では通ってしまう「起動時クラッシュ」を merge 前に検出する。
   # 本番と同じ Dockerfile でイメージをビルドし、隣に Postgres を立てて
-  #   1) デプロイと同じスキーマ初期化 `python -m app.dbctl init-db` が実 DB に対して通るか
+  #   1) デプロイと同じマイグレーション `alembic upgrade head` が実 DB に対して通るか
   #   2) uvicorn が起動して /health・/api/hello が 200 を返すか
   # を検査する（PR #7 で発生した DB 接続起因のクラッシュループの再発防止）。
   backend-smoke:
@@ -57,7 +57,7 @@ jobs:
         run: docker compose up -d db
 
       - name: Schema init (production migration path)
-        run: docker compose run --rm backend python -m app.dbctl init-db
+        run: docker compose run --rm backend alembic upgrade head
 
       - name: Start backend & wait for /health
         run: |

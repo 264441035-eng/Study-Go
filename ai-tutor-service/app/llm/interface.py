@@ -9,6 +9,14 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 
+class LLMError(RuntimeError):
+    """LLM 呼び出しの失敗 (権限・スロットリング・モデル未提供など)。
+
+    API 層でこれを 503 に変換し、生の 500 / スタックトレースを晒さない。
+    典型例: 評価用モデルの Bedrock モデルアクセス未有効 → AccessDeniedException。
+    """
+
+
 @dataclass
 class Message:
     role: str  # "user" | "assistant"

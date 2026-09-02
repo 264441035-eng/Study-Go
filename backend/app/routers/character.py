@@ -190,6 +190,61 @@ def find_character_or_404(character_id: UUID, db: Session) -> Character:
     return character
 
 
+# 追加関数: ログインのないデモで使用する1体を取得し、なければ作成する。
+def get_or_create_demo_character(
+    db: Session, *, for_update: bool = False
+) -> Character:
+    """DBの先頭のキャラクターを取得し、存在しなければ初期状態で作成する。
+
+    ``for_update=True`` の場合は既存行をロックして、同時更新による
+    累計勉強時間の消失を防ぐ。トランザクションの確定は呼び出し元に任せる。
+    """
+    statement = select(Character).order_by(Character.id).limit(1)
+    if for_update:
+        statement = statement.with_for_update()
+
+    character = db.scalar(statement)
+    if character is not None:
+        return character
+
+    character = Character(
+        name="Demo Character",
+        total_study_minutes=0,
+        total_penalty_minutes=0,
+        effective_study_minutes=0,
+        level=1,
+        highest_level=1,
+        minimum_level=1,
+        evolution_stage=0,
+        remaining_minutes_to_next_level=0,
+        last_studied_at=None,
+        penalty_applied_through=None,
+    )
+    refresh_character_progress(character)
+    db.add(character)
+    db.flush()
+    return character
+
+
+# 追加関数: Characterへの勉強時間加算と育成状態更新を一か所に集約する。
+def add_study_minutes_to_character(
+    character: Character, minutes: int, now: datetime
+) -> None:
+    """正の勉強時間（分）を加算し、ペナルティと育成状態を更新する。
+
+    DBへのコミットは行わず、Character APIやTask APIなどの呼び出し元が
+    ほかのDB更新とまとめてトランザクションを確定できるようにする。
+    """
+    if minutes <= 0:
+        raise ValueError("Study minutes must be greater than zero")
+
+    apply_inactivity_penalty(character, now)
+    character.total_study_minutes += minutes
+    refresh_character_progress(character)
+    character.last_studied_at = now
+    character.penalty_applied_through = study_date(now)
+
+
 # 追加関数: 保存状態を表示用時間を含むAPIレスポンスへ変換する。
 def to_character_out(character: Character) -> CharacterOut:
     """DBモデルを表示用時間付きのAPIレスポンスへ変換する。
@@ -284,6 +339,22 @@ def create_character(
     return to_character_out(created)
 
 
+@router.post("/initialize", summary="デモ用キャラクターを取得または作成")
+def initialize_demo_character(db: Session = Depends(get_db)) -> UUID:
+    """デモで使用する1体のキャラクターIDを返す。
+
+    - DBにキャラクターが1体以上あれば、先頭のキャラクターIDを返す。
+    - DBにキャラクターがなければ、名前が ``Demo Character`` のキャラクターを作成し、
+      作成されたキャラクターIDを返す。
+    - **出力**: キャラクターIDのUUID値。
+
+    ログインのないデモ版で、ホーム画面から使用するキャラクターを決定するためのAPI。
+    """
+    character = get_or_create_demo_character(db)
+    db.commit()
+    return character.id
+
+
 # 追加エンドポイント: 勉強時間を登録して育成状態を更新する。
 @router.post("/{character_id}/study", summary="勉強時間を登録")
 def record_study(
@@ -306,24 +377,7 @@ def record_study(
     )
     if character is None:
         raise HTTPException(status_code=404, detail="Character not found")
-    now = utc_now()
-
-    # 今回の勉強を追加する前に、前回の勉強日から今日までの間にある
-    # 未学習日分のペナルティを適用する。
-    apply_inactivity_penalty(character, now)
-
-    # 今回の勉強時間を総勉強時間へ加算する。
-    character.total_study_minutes += study.minutes
-
-    # 有効勉強時間、レベル、最高レベル、最低保証レベル、進化段階、
-    # 次レベルまでの残り時間をまとめて更新する。
-    refresh_character_progress(character)
-
-    # 最終勉強日時を更新する。
-    character.last_studied_at = now
-
-    # 今日までのペナルティ判定が完了したことを記録する。
-    character.penalty_applied_through = study_date(now)
+    add_study_minutes_to_character(character, study.minutes, utc_now())
 
     db.commit()
     db.refresh(character)

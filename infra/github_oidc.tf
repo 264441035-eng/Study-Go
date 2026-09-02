@@ -61,6 +61,7 @@ data "aws_iam_policy_document" "github_deploy" {
     resources = [
       aws_ecr_repository.backend.arn,
       aws_ecr_repository.frontend.arn,
+      aws_ecr_repository.ai_tutor.arn,
     ]
   }
 
@@ -85,6 +86,7 @@ data "aws_iam_policy_document" "github_deploy" {
     resources = [
       aws_iam_role.ecs_task_execution.arn,
       aws_iam_role.ecs_task.arn,
+      aws_iam_role.ai_tutor_task.arn,
     ]
   }
 }

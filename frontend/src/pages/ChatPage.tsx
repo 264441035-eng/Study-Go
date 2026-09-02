@@ -1,13 +1,6 @@
 import AiTutorChat from "../AiTutorChat";
 
+// ヘッダー（戻る/ログアウト）とレイアウトは AiTutorChat 側が chat.css で持つ。
 export default function ChatPage() {
-  return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
-      <a href="#/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 14 }}>
-        ← ホームに戻る
-      </a>
-      <div style={{ height: 12 }} />
-      <AiTutorChat />
-    </div>
-  );
+  return <AiTutorChat />;
 }

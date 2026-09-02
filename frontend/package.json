@@ -13,7 +13,8 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

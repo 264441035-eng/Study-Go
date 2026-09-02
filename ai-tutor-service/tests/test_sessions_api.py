@@ -140,3 +140,28 @@ def test_cannot_message_after_finish():
 def test_finish_requires_auth():
     sid = _start()
     assert client.post(f"/sessions/{sid}/finish").status_code == 401
+
+
+def test_finish_returns_503_when_llm_unavailable():
+    # 評価モデルのモデルアクセス未有効 (Bedrock AccessDenied) 等は生の 500 でなく 503。
+    from app.api.deps import get_assessment_service
+    from app.llm.interface import LLMClient, LLMError
+    from app.services.assessment import AssessmentService
+
+    class _RaisingLLM(LLMClient):
+        def complete(self, **kwargs):  # pragma: no cover - 会話側は使わない
+            raise LLMError("boom")
+
+        def stream(self, **kwargs):  # pragma: no cover
+            raise LLMError("boom")
+
+        def complete_structured(self, **kwargs):
+            raise LLMError("model access denied")
+
+    app.dependency_overrides[get_assessment_service] = lambda: AssessmentService(
+        _RaisingLLM(), get_settings()
+    )
+    sid = _start()
+    resp = client.post(f"/sessions/{sid}/finish", headers=HEADERS)
+    assert resp.status_code == 503
+    assert "一時的に利用できません" in resp.json()["detail"]

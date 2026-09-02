@@ -4,3 +4,9 @@
 # desired_count = 1
 # image_tag     = "latest"
 # github_repo   = "264441035-eng/Study-Go"
+
+# AI Tutor ログインの認証情報。平文は含まず bcrypt ハッシュのみ。
+# 生成: cd backend && python -m scripts.hash_password --json <id> ...
+# 秘匿のため tfvars には書かず、TF_VAR_auth_users_json で渡すことを推奨:
+#   export TF_VAR_auth_users_json='{"a-team": "$2b$12$..."}'
+# auth_users_json = "{\"a-team\": \"$2b$12$...\"}"

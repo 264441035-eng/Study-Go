@@ -1,3 +1,9 @@
+/*
+ * AI Tutor チャット画面のスタイル。
+ * feature/chat-ui-mock (PR #27) で作成したモックのデザインを、
+ * 機能する AiTutorChat コンポーネントへ反映したもの。
+ */
+
 * {
     box-sizing: border-box;
 }
@@ -12,7 +18,6 @@ body {
 .chat-page {
     width: 100%;
     max-width: 620px;
-    min-height: 100vh;
     margin: 0 auto;
     padding: 20px 18px 36px;
     display: flex;
@@ -20,6 +25,9 @@ body {
 }
 
 .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 12px;
 }
 
@@ -32,6 +40,16 @@ body {
     cursor: pointer;
     padding: 0;
     line-height: 1;
+}
+
+/* ヘッダー右側のログアウト（モックには無い機能要素）。 */
+.logout-link {
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
 }
 
 .chat-panel {
@@ -71,6 +89,14 @@ body {
 .send-button:hover,
 .finish-button:hover {
     transform: scale(1.02);
+}
+
+.start-button:disabled,
+.send-button:disabled,
+.finish-button:disabled {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
 }
 
 .start-button {
@@ -165,10 +191,53 @@ textarea {
 
 .ready-hint {
     margin: 12px 0 0;
-    text-align: center;
     color: #047857;
     font-size: 13px;
     font-weight: 600;
+    text-align: center;
+}
+
+/* --- 以下はモックに無い機能要素（ログインフォーム・評価レポート・エラー） --- */
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.chat-panel input {
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font: inherit;
+    background: #fff;
+}
+
+.report {
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.report h3 {
+    margin: 0 0 8px;
+    color: #4c1d95;
+}
+
+.report ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.chat-error {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 10px;
+    white-space: pre-wrap;
 }
 
 @media (max-width: 420px) {
