@@ -51,9 +51,15 @@ jobs:
         id: build
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
+          # HTTPリファラー制限をかけた公開用キー（秘密鍵ではない）。ビルド時に埋め込む。
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
         run: |
           IMAGE="$REGISTRY/${{ matrix.ecr }}:${{ github.sha }}"
-          docker build -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
+          BUILD_ARGS=()
+          if [ "${{ matrix.name }}" = "frontend" ]; then
+            BUILD_ARGS+=(--build-arg "VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY")
+          fi
+          docker build "${BUILD_ARGS[@]}" -t "$IMAGE" -t "$REGISTRY/${{ matrix.ecr }}:latest" ${{ matrix.context }}
           docker push "$IMAGE"
           docker push "$REGISTRY/${{ matrix.ecr }}:latest"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
