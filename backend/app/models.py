@@ -6,15 +6,12 @@
 import uuid
 from bisect import bisect_right
 from dataclasses import dataclass
-from datetime import datetime
 from datetime import date, datetime
 from decimal import Decimal
 from functools import lru_cache
 
-from sqlalchemy import DateTime, Integer, Numeric, String, Uuid, func
+from sqlalchemy import Date, DateTime, Integer, Numeric, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Uuid, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
