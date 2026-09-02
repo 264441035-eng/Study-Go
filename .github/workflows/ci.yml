@@ -7,6 +7,23 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # DB を使う機能のテストが増えるため、pytest を実 Postgres に対して実行する。
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: study_go
+          POSTGRES_PASSWORD: study_go
+          POSTGRES_DB: study_go
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U study_go"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://study_go:study_go@localhost:5432/study_go
     defaults:
       run:
         working-directory: backend
@@ -18,8 +35,49 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Lint (ruff)
         run: ruff check .
+      - name: Init schema (create tables)
+        run: python -m app.dbctl init-db
       - name: Test (pytest)
         run: pytest -q
+
+  # ユニットテスト(in-memory)では通ってしまう「起動時クラッシュ」を merge 前に検出する。
+  # 本番と同じ Dockerfile でイメージをビルドし、隣に Postgres を立てて
+  #   1) デプロイと同じスキーマ初期化 `python -m app.dbctl init-db` が実 DB に対して通るか
+  #   2) uvicorn が起動して /health・/api/hello が 200 を返すか
+  # を検査する（PR #7 で発生した DB 接続起因のクラッシュループの再発防止）。
+  backend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker compose build backend
+
+      - name: Start Postgres
+        run: docker compose up -d db
+
+      - name: Schema init (production migration path)
+        run: docker compose run --rm backend python -m app.dbctl init-db
+
+      - name: Start backend & wait for /health
+        run: |
+          docker compose up -d backend
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then echo; echo "backend healthy"; exit 0; fi
+            sleep 2
+          done
+          echo "backend did not become healthy in time"; exit 1
+
+      - name: Smoke test /api/hello
+        run: curl -fsS http://localhost:8000/api/hello
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
 
   frontend:
     runs-on: ubuntu-latest
