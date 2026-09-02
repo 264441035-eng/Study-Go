@@ -1,6 +1,27 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import Home from "./home";
+import Study from "./study";
+import Task from "./task";
+import Chat from "./chat";
+//import Pass from "./pass";
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+
+        <Route path="/" element={<Home />} />
+        <Route path="/study" element={<Study />} />
+        <Route path="/task" element={<Task />} />
+        <Route path="/chat" element={<Chat />} />
+
+      </Routes>
+    </BrowserRouter>
+  );
+}
 // 本番では VITE_API_URL に ALB の URL を渡す。未設定時は同一オリジンの /api を叩く。
+/*
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 export default function App() {
@@ -19,4 +40,7 @@ export default function App() {
       <p>Backend says: {message}</p>
     </main>
   );
+
+  
 }
+  */
