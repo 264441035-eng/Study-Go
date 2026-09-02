@@ -25,6 +25,7 @@ export default defineConfig({
         map: "map.html",
         task: "task.html",
         training: "training.html",
+        chat: "chat.html",
       },
     },
   },
