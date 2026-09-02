@@ -1,3 +1,5 @@
+export {};
+
 let startTime: number | null = null;
 let timerInterval: number | null = null;
 let elapsedSeconds = 0;
@@ -82,6 +84,10 @@ function startStudy(): void {
 // =========================
 
 function stopStudy(): void {
+    if (startTime === null) {
+        return;
+    }
+
     if (timerInterval !== null) {
         clearInterval(timerInterval);
         timerInterval = null;
