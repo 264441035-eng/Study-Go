@@ -11,6 +11,12 @@
 PERSONA_TSUNDERE = "tsundere"  # 進化前(stage 0)
 PERSONA_ONEE = "onee"  # 進化後(stage >= 1)
 
+# system プロンプト中に必ず現れる、persona を判別するための語。
+# 実プロンプトでも自然文として使う語なので、Bedrock へは普通の文章として渡る。
+# mock LLM はこれを手がかりに、口調に合わせた応答を返す（app/llm/mock.py）。
+MARKER_TSUNDERE = "ツンデレ"
+MARKER_ONEE = "お姉さん"
+
 
 # --- 会話（質問）中の口調。ベースの SYSTEM_PROMPT に追記する ---
 _CONVERSATION_TONE = {

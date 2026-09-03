@@ -2,6 +2,7 @@
 from app.config import LLMMode, Settings
 from app.llm import Message, get_llm_client
 from app.llm.mock import MockLLMClient
+from app.services import persona as persona_tone
 
 
 def _client() -> MockLLMClient:
@@ -47,3 +48,35 @@ def test_structured_returns_assessment_shape():
     assert out["topic"] == "quadratic_functions"
     assert 0 <= out["overall_score"] <= 100
     assert out["strengths"] and out["weaknesses"]
+
+
+def test_persona_changes_question_tone():
+    # system プロンプトに口調（persona）マーカーが載っていると、
+    # mock でも会話の台本が切り替わる（Bedrock 未接続でも口調を確認できる）。
+    c = _client()
+    neutral = c.complete(system="", messages=[])
+    tsundere = c.complete(
+        system=persona_tone.conversation_tone(persona_tone.PERSONA_TSUNDERE),
+        messages=[],
+    )
+    onee = c.complete(
+        system=persona_tone.conversation_tone(persona_tone.PERSONA_ONEE),
+        messages=[],
+    )
+    assert neutral != tsundere != onee != neutral
+    assert "なさいよ" in tsundere  # ツンデレらしい語尾
+    assert "かしら" in onee  # お姉さんらしい語尾
+
+
+def test_structured_stays_factual_regardless_of_persona():
+    # 評価項目そのもの（strengths/weaknesses）は口調で変えない。
+    # 口調付けは report 層が行うため、ここで飾ると二重装飾になる。
+    c = _client()
+    base = c.complete_structured(system="", messages=[], schema={})
+    with_persona = c.complete_structured(
+        system=persona_tone.assessment_tone(persona_tone.PERSONA_TSUNDERE),
+        messages=[],
+        schema={},
+    )
+    assert base["strengths"] == with_persona["strengths"]
+    assert base["weaknesses"] == with_persona["weaknesses"]
