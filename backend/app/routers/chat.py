@@ -141,8 +141,12 @@ def issue_dev_token(request: Request, body: dict = Body(...)) -> JSONResponse:
 
 
 @router.post("/sessions")
-def start_ai_tutor_session(request: Request) -> JSONResponse:
-    return _proxy_to_ai_tutor(request, "/sessions", None)
+def start_ai_tutor_session(
+    request: Request, body: dict | None = Body(default=None)
+) -> JSONResponse:
+    # body には進化段階から決めた口調(persona)が入る（フロント aiTutor.ts）。
+    # そのまま ai-tutor-service へ中継する。未指定でも動く。
+    return _proxy_to_ai_tutor(request, "/sessions", body)
 
 
 @router.post("/sessions/{session_id}/messages")

@@ -88,6 +88,32 @@ body {
     }
 }
 
+/* 生徒の回答に反応して「激しく喜ぶ」。跳ねて左右に振れて拡大する。 */
+.chat-character.is-celebrating {
+    animation: chat-celebrate 0.45s ease-in-out 2;
+}
+
+@keyframes chat-celebrate {
+    0% {
+        transform: translateY(0) rotate(0) scale(1);
+    }
+    20% {
+        transform: translateY(-18px) rotate(-14deg) scale(1.12);
+    }
+    40% {
+        transform: translateY(0) rotate(12deg) scale(1.08);
+    }
+    60% {
+        transform: translateY(-12px) rotate(-8deg) scale(1.1);
+    }
+    80% {
+        transform: translateY(0) rotate(6deg) scale(1.05);
+    }
+    100% {
+        transform: translateY(0) rotate(0) scale(1);
+    }
+}
+
 .chat-panel h1 {
     margin: 0 0 8px;
     font-size: clamp(1.7rem, 2vw, 2.2rem);

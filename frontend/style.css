@@ -153,6 +153,71 @@ h1 {
     color: #4b0082;
 }
 
+/* キャラのセリフ吹き出し。下向きのしっぽでキャラを指す。 */
+.speech-bubble {
+    position: relative;
+    width: 90%;
+    max-width: 360px;
+    min-height: 52px;
+    margin: 6px auto 4px;
+    padding: 12px 16px;
+
+    background: #fff;
+    border: 2px solid #d9b8f2;
+    border-radius: 18px;
+    box-shadow: 0 4px 10px rgba(75, 0, 130, 0.08);
+
+    color: #4b0082;
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* しっぽ（枠線ぶんだけ大きい三角を重ねて縁取りを表現する） */
+.speech-bubble::before,
+.speech-bubble::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.speech-bubble::before {
+    margin-left: -11px;
+    border-width: 12px 11px 0;
+    border-top-color: #d9b8f2;
+}
+
+.speech-bubble::after {
+    margin-left: -8px;
+    border-width: 9px 8px 0;
+    border-top-color: #fff;
+}
+
+/* タイピング中に見せる点滅カーソル。 */
+.speech-bubble.is-typing #bubbleText::after {
+    content: "▌";
+    margin-left: 1px;
+    animation: bubble-caret 0.7s step-end infinite;
+    color: #b98bea;
+}
+
+@keyframes bubble-caret {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
 /* キャラクター */
 .character {
     width: 220px;
