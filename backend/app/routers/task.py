@@ -186,6 +186,20 @@ def _reset_daily_study_session_if_needed() -> None:
     _status_date = today
 
 
+def reset_today_study_session() -> None:
+    """メモリ保持の勉強セッション（今日の勉強記録・開始時刻）を初期化する。
+
+    キャラのレベルリセットAPI（character.reset_character）から呼ばれる。
+    これをしないと、レベルは1に戻っても「今日の勉強時間」表示や
+    勉強時間による自動タスク達成の判定がリセット前の値のまま残ってしまう。
+    """
+
+    global _study_started_at
+
+    _study_records.clear()
+    _study_started_at = None
+
+
 def _today_study_seconds() -> int:
     """今日の勉強時間の合計を求める。"""
 

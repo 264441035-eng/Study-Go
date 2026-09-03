@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models import Character
 from app.routers import character as character_router
+from app.routers import task as task_router
 
 client = TestClient(app)
 
@@ -141,6 +142,28 @@ def test_reset_unknown_character_returns_404() -> None:
     response = client.post(f"/api/characters/{uuid4()}/reset")
 
     assert response.status_code == 404
+
+
+def test_reset_also_clears_today_study_time() -> None:
+    """レベルリセット後は、今日の勉強時間（メモリ保持の勉強セッション）も0に戻る。"""
+    task_router._study_records.clear()
+    task_router._study_started_at = None
+    try:
+        created = client.post("/api/characters", json={"name": "Resetter2"}).json()
+
+        client.post("/api/tasks/study/start")
+        client.post("/api/tasks/study/time", json={"seconds": 120})
+        before = client.get("/api/tasks/context/study-time").json()
+        assert before["today_seconds"] > 0
+
+        response = client.post(f"/api/characters/{created['id']}/reset")
+        assert response.status_code == 200
+
+        after = client.get("/api/tasks/context/study-time").json()
+        assert after["today_seconds"] == 0
+    finally:
+        task_router._study_records.clear()
+        task_router._study_started_at = None
 
 
 def test_study_time_reaches_evolution_level() -> None:
