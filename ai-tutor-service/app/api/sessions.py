@@ -24,6 +24,7 @@ from app.models.api import (
     FinishResponse,
     SendMessageRequest,
     SendMessageResponse,
+    StartSessionRequest,
     StartSessionResponse,
 )
 from app.repositories import SessionRepository
@@ -53,15 +54,17 @@ def _load_owned_active_session(
 
 @router.post("", response_model=StartSessionResponse)
 def start_session(
+    body: StartSessionRequest | None = None,
     user_id: str = Depends(get_current_user_id),
     repo: SessionRepository = Depends(get_session_repo),
     conv: ConversationService = Depends(get_conversation_service),
     settings: Settings = Depends(get_settings),
 ) -> StartSessionResponse:
     limits.check_daily_session_limit(user_id, repo, settings)
-    session = Session(user_id=user_id)
+    persona = body.persona if body else None
+    session = Session(user_id=user_id, persona=persona)
     repo.create_session(session)
-    opening = conv.opening_message()
+    opening = conv.opening_message(persona)
     repo.add_message(
         ConversationMessage(
             session_id=session.session_id, role=Role.assistant, content=opening

@@ -4,6 +4,7 @@ import {
   fetchDevToken,
   finishSession,
   getTokenFromUrl,
+  personaForStage,
   sendMessage,
   startSession,
   type ConversationState,
@@ -27,10 +28,69 @@ function goHome() {
 
 // チャット画面に表示する小さなキャラクター。
 // 進化前(PNG)は CSS で「ぴょこぴょこ」動かし、進化後(GIF)はそのまま再生する。
-// refreshKey が変わると進化段階を取り直す（チャット完了で経験値が増えた後など）。
-function ChatCharacter({ refreshKey }: { refreshKey: number }) {
-  const [stage, setStage] = useState(0);
+// celebrateKey が変わるたびに「激しく喜ぶ」アニメーションを一度だけ再生する
+// （生徒が回答して返事が返ってきたときなど）。stage は親が保持する。
+function ChatCharacter({
+  stage,
+  celebrateKey,
+}: {
+  stage: number;
+  celebrateKey: number;
+}) {
+  const [celebrating, setCelebrating] = useState(false);
 
+  useEffect(() => {
+    // 初期表示(0)では動かさない。値が変わったときだけ短く喜ばせる。
+    if (celebrateKey === 0) return;
+    setCelebrating(true);
+    const timer = window.setTimeout(() => setCelebrating(false), 900);
+    return () => window.clearTimeout(timer);
+  }, [celebrateKey]);
+
+  const appearance = appearanceForStage(stage);
+  // 喜んでいる間は celebration を優先し、それ以外は進化前だけ「ぴょこぴょこ」。
+  const motionClass = celebrating
+    ? " is-celebrating"
+    : appearance.bounce
+      ? " is-bouncing"
+      : "";
+  return (
+    <div className="chat-character-wrap">
+      <img
+        className={`chat-character${motionClass}`}
+        src={appearance.src}
+        alt="あなたのキャラクター"
+      />
+    </div>
+  );
+}
+
+export default function AiTutorChat() {
+  // トークンの取得順: ログイン保存 → 配布URL(?token=)。どちらも無ければログインフォーム。
+  const [token, setToken] = useState<string | null>(() => getStoredToken() ?? getTokenFromUrl());
+  // token が無いときだけ、local(APP_ENV=local)向けに dev トークン自動取得を試す。
+  const [authChecking, setAuthChecking] = useState(() => (getStoredToken() ?? getTokenFromUrl()) === null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [state, setState] = useState<ConversationState | null>(null);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<FinishResponse | null>(null);
+  // 値が変わるとチャット画面のキャラの進化段階を取り直す。
+  const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
+  // キャラの進化段階。口調(persona)の決定とアニメーションに使う。
+  const [stage, setStage] = useState(0);
+  // 値が変わるたびにキャラが「激しく喜ぶ」。生徒の回答に反応させるため。
+  const [celebrateKey, setCelebrateKey] = useState(0);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+  }, [messages, result]);
+
+  // キャラの進化段階を取得する。characterRefreshKey が変わると取り直す
+  // （チャット完了で経験値が増えて進化した後など）。
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -53,39 +113,7 @@ function ChatCharacter({ refreshKey }: { refreshKey: number }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
-
-  const appearance = appearanceForStage(stage);
-  return (
-    <div className="chat-character-wrap">
-      <img
-        className={`chat-character${appearance.bounce ? " is-bouncing" : ""}`}
-        src={appearance.src}
-        alt="あなたのキャラクター"
-      />
-    </div>
-  );
-}
-
-export default function AiTutorChat() {
-  // トークンの取得順: ログイン保存 → 配布URL(?token=)。どちらも無ければログインフォーム。
-  const [token, setToken] = useState<string | null>(() => getStoredToken() ?? getTokenFromUrl());
-  // token が無いときだけ、local(APP_ENV=local)向けに dev トークン自動取得を試す。
-  const [authChecking, setAuthChecking] = useState(() => (getStoredToken() ?? getTokenFromUrl()) === null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [state, setState] = useState<ConversationState | null>(null);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<FinishResponse | null>(null);
-  // 値が変わるとチャット画面のキャラの進化段階を取り直す。
-  const [characterRefreshKey, setCharacterRefreshKey] = useState(0);
-  const logRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [messages, result]);
+  }, [characterRefreshKey]);
 
   // token 未取得のときだけ dev トークン取得を試す。
   // local では成功してログイン不要、本番では /dev/token が 404 なので失敗しフォームを出す。
@@ -126,7 +154,8 @@ export default function AiTutorChat() {
     setError(null);
     setLoading(true);
     try {
-      const s = await startSession(token);
+      // 進化段階に応じた口調（進化前=ツンデレ / 進化後=お姉さん）で会話させる。
+      const s = await startSession(token, personaForStage(stage));
       setSessionId(s.session_id);
       setMessages([{ role: "assistant", content: s.message }]);
       setState("questioning");
@@ -149,6 +178,8 @@ export default function AiTutorChat() {
       const res = await sendMessage(token, sessionId, text);
       setMessages((m) => [...m, { role: "assistant", content: res.message }]);
       setState(res.state);
+      // 生徒の回答にAIが返事したので、キャラを激しく喜ばせる。
+      setCelebrateKey((k) => k + 1);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -164,6 +195,8 @@ export default function AiTutorChat() {
       setResult(await finishSession(token, sessionId));
       // 経験値が増えてキャラが進化しているかもしれないので取り直す。
       setCharacterRefreshKey((k) => k + 1);
+      // 評価が出たお祝いに、キャラを激しく喜ばせる。
+      setCelebrateKey((k) => k + 1);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -204,7 +237,7 @@ export default function AiTutorChat() {
       </header>
 
       <section className="chat-panel">
-        <ChatCharacter refreshKey={characterRefreshKey} />
+        <ChatCharacter stage={stage} celebrateKey={celebrateKey} />
         <h1>AIチューター</h1>
         <p className="chat-hint">
           今日勉強したことを話してみよう。AIが興味を持って聞いて、一緒に理解を深めてくれます。

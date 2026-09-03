@@ -74,6 +74,64 @@ body {
 }
 
 /* --------------------
+   上部のキャラクター
+-------------------- */
+
+.task-character-wrap {
+    display: flex;
+    justify-content: center;
+    margin: -8px 0 18px;
+}
+
+.task-character {
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(139, 111, 199, 0.2));
+}
+
+/* 進化前(PNG)だけ「ぴょこぴょこ」動かす。GIFは自分で動くので付けない。 */
+.task-character.is-bouncing {
+    animation: task-pyoko 1s ease-in-out infinite;
+}
+
+@keyframes task-pyoko {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+/* タスク完了時に「激しく喜ぶ」。跳ねて左右に振れて拡大する。 */
+.task-character.is-celebrating {
+    animation: task-celebrate 0.45s ease-in-out 2;
+}
+
+@keyframes task-celebrate {
+    0% {
+        transform: translateY(0) rotate(0) scale(1);
+    }
+    20% {
+        transform: translateY(-18px) rotate(-14deg) scale(1.12);
+    }
+    40% {
+        transform: translateY(0) rotate(12deg) scale(1.08);
+    }
+    60% {
+        transform: translateY(-12px) rotate(-8deg) scale(1.1);
+    }
+    80% {
+        transform: translateY(0) rotate(6deg) scale(1.05);
+    }
+    100% {
+        transform: translateY(0) rotate(0) scale(1);
+    }
+}
+
+/* --------------------
    タブ
 -------------------- */
 

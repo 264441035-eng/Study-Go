@@ -6,6 +6,12 @@
 from pydantic import BaseModel, Field
 
 
+class StartSessionRequest(BaseModel):
+    # 進化前=tsundere / 進化後=onee。フロントが渡す口調(app.services.persona)。
+    # 未指定でも動くよう任意にする（既定の親しみやすい口調になる）。
+    persona: str | None = None
+
+
 class StartSessionResponse(BaseModel):
     session_id: str
     message: str

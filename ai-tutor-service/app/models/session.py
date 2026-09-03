@@ -27,5 +27,8 @@ class Session(BaseModel):
     topic: str | None = None
     concept_index: int = 0
 
+    # 進化前=tsundere / 進化後=onee。フロントが start 時に渡す口調(app.services.persona)。
+    persona: str | None = None
+
     created_at: datetime = Field(default_factory=_now)
     finished_at: datetime | None = None

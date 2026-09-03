@@ -14,6 +14,91 @@ const xpBarFill =
 const xpLabel = document.getElementById("xpLabel") as HTMLElement | null;
 const resetButton =
     document.getElementById("resetButton") as HTMLButtonElement | null;
+const speechBubble =
+    document.getElementById("speechBubble") as HTMLElement | null;
+const bubbleText =
+    document.getElementById("bubbleText") as HTMLElement | null;
+
+// 進化段階ごとのキャラのセリフ候補。
+// 進化前(stage 0)はツンデレ系の応援、進化後(stage>=1)はお姉さん系（少し上から目線）。
+const TSUNDERE_LINES = [
+    "もうちょっと頑張りなさいよ！ 私が応援してるんだからね！",
+    "べ、別にあなたのために言ってるんじゃないんだからね！",
+    "そんなペースで進化できると思ってるの？ ほら、勉強勉強！",
+    "…ちょっとはやる気出しなさいよね。見ててあげるから。",
+    "サボってない？ 私がいないとダメなんだから、もう。",
+];
+
+const ONEE_LINES = [
+    "なかなかやるじゃない。この調子で行くといいわ。",
+    "ふふ、成長したわね。でも油断は禁物よ？",
+    "その調子。あなたならもっと上を目指せるわ。",
+    "いい集中力ね。私が見込んだだけのことはあるわ。",
+    "少し休んでもいいのよ？ 無理は禁物だからね。",
+];
+
+// タイピング演出のタイマー。再描画のたびに前のタイピングを止めるため保持する。
+let typingTimer: number | null = null;
+// 5秒ごとにセリフを切り替えるためのタイマー。
+let bubbleRotationTimer: number | null = null;
+// 直前に表示したセリフ。連続で同じものを出さないために覚えておく。
+let lastBubbleLine: string | null = null;
+
+// 吹き出しにセリフを1文字ずつ表示する（タイピング風）。
+function typewriteBubble(text: string): void {
+    if (speechBubble === null || bubbleText === null) {
+        return;
+    }
+    if (typingTimer !== null) {
+        window.clearInterval(typingTimer);
+    }
+    bubbleText.textContent = "";
+    speechBubble.classList.add("is-typing");
+
+    let index = 0;
+    typingTimer = window.setInterval(() => {
+        // Array.from で絵文字などのサロゲートペアも1文字として扱う。
+        const chars = Array.from(text);
+        bubbleText.textContent = chars.slice(0, index + 1).join("");
+        index += 1;
+        if (index >= chars.length) {
+            if (typingTimer !== null) {
+                window.clearInterval(typingTimer);
+                typingTimer = null;
+            }
+            speechBubble.classList.remove("is-typing");
+        }
+    }, 55);
+}
+
+// 進化段階に応じたセリフ候補から、直前と違うものをランダムに1つ選ぶ。
+function pickBubbleLine(stage: number): string {
+    const lines = stage >= 1 ? ONEE_LINES : TSUNDERE_LINES;
+    if (lines.length <= 1) {
+        return lines[0];
+    }
+    let line = lastBubbleLine;
+    while (line === lastBubbleLine) {
+        line = lines[Math.floor(Math.random() * lines.length)];
+    }
+    lastBubbleLine = line;
+    return line;
+}
+
+// 進化段階に応じてセリフを表示し、以降5秒ごとに自動で切り替える。
+function showBubbleForStage(stage: number): void {
+    // 再読み込み（リセット後など）に備えて、前回のローテーションを止める。
+    if (bubbleRotationTimer !== null) {
+        window.clearInterval(bubbleRotationTimer);
+    }
+    lastBubbleLine = null;
+
+    typewriteBubble(pickBubbleLine(stage));
+
+    bubbleRotationTimer = window.setInterval(() => {
+        typewriteBubble(pickBubbleLine(stage));
+    }, 5000);
+}
 
 // リセットボタンから使えるよう、現在のデモ用キャラクターIDを保持する。
 let currentCharacterId: string | null = null;
@@ -92,6 +177,7 @@ async function loadCharacter(): Promise<void> {
         if (statusElement !== null) {
             statusElement.textContent = statusMessageForStage(stage);
         }
+        showBubbleForStage(stage);
     } catch (error) {
         console.error("キャラクター情報の取得に失敗:", error);
         if (levelElement !== null) {

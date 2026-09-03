@@ -65,8 +65,17 @@ export async function fetchDevToken(userId = "demo-student"): Promise<string> {
   return data.token;
 }
 
-export function startSession(token: string) {
-  return post<StartSessionResponse>('/api/chat/sessions', token);
+// 進化前=tsundere / 進化後=onee。キャラの進化段階から決めた口調。
+// ai-tutor-service 側(app/services/persona.py)の定数と一致させる。
+export type Persona = "tsundere" | "onee";
+
+// 進化段階(evolution_stage)から口調を決める。進化前(0)はツンデレ、進化後(>=1)はお姉さん。
+export function personaForStage(stage: number): Persona {
+  return stage >= 1 ? "onee" : "tsundere";
+}
+
+export function startSession(token: string, persona?: Persona) {
+  return post<StartSessionResponse>('/api/chat/sessions', token, { persona });
 }
 
 export function sendMessage(token: string, sessionId: string, message: string) {

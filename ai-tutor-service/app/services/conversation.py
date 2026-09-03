@@ -7,6 +7,7 @@
 from app.config import Settings
 from app.llm.interface import LLMClient, Message
 from app.models import ConversationMessage, Role, Session
+from app.services import persona as persona_tone
 from app.services.concept_map import get_concept, get_concepts
 
 SYSTEM_PROMPT = (
@@ -61,10 +62,10 @@ class ConversationService:
     def _to_llm(self, history: list[ConversationMessage]) -> list[Message]:
         return [Message(role=m.role.value, content=m.content) for m in history]
 
-    def opening_message(self) -> str:
-        """セッション開始時の最初の質問。"""
+    def opening_message(self, persona: str | None = None) -> str:
+        """セッション開始時の最初の質問。persona で口調だけを切り替える。"""
         return self.llm.complete(
-            system=SYSTEM_PROMPT,
+            system=SYSTEM_PROMPT + persona_tone.conversation_tone(persona),
             messages=[],
             model_id=self._model_id(),
             max_tokens=self.settings.conversation_max_tokens,
@@ -103,7 +104,11 @@ class ConversationService:
                 "次の概念につながる質問をしてください。\n"
             )
 
-        system_prompt = SYSTEM_PROMPT + concept_instruction
+        system_prompt = (
+            SYSTEM_PROMPT
+            + concept_instruction
+            + persona_tone.conversation_tone(session.persona)
+        )
 
         text = self.llm.complete(
             system=system_prompt,

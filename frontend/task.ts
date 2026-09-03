@@ -1,4 +1,4 @@
-export {};
+import { appearanceForStage } from "./character";
 
 // 本番では VITE_API_URL に ALB の URL を渡す。未設定時は同一オリジンの /api を叩く。
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -42,6 +42,78 @@ const backButton = document.getElementById("back-button") as HTMLButtonElement;
 const resetButton = document.getElementById(
     "reset-button",
 ) as HTMLButtonElement | null;
+const taskCharacter = document.getElementById(
+    "task-character",
+) as HTMLImageElement | null;
+
+
+// --------------------
+// 上部のキャラクター
+// --------------------
+
+// タスク完了時の「激しく喜ぶ」アニメーションを止めるためのタイマー。
+let celebrateTimer: number | null = null;
+
+// 進化段階に応じてキャラ画像を差し替える。進化前(PNG)はぴょこぴょこ動かす。
+function renderTaskCharacter(stage: number): void {
+    if (taskCharacter === null) {
+        return;
+    }
+    const appearance = appearanceForStage(stage);
+    taskCharacter.src = appearance.src;
+    taskCharacter.classList.toggle("is-bouncing", appearance.bounce);
+}
+
+// タスクを完了したときにキャラを激しく喜ばせる（一度だけ再生）。
+function celebrateTaskCharacter(): void {
+    if (taskCharacter === null) {
+        return;
+    }
+    // 喜んでいる間は通常のぴょこぴょこを止め、celebration を優先する。
+    taskCharacter.classList.remove("is-bouncing");
+    taskCharacter.classList.remove("is-celebrating");
+    // リフローを挟んでアニメーションを確実に再スタートさせる。
+    void taskCharacter.offsetWidth;
+    taskCharacter.classList.add("is-celebrating");
+
+    if (celebrateTimer !== null) {
+        window.clearTimeout(celebrateTimer);
+    }
+    celebrateTimer = window.setTimeout(() => {
+        taskCharacter.classList.remove("is-celebrating");
+        // 進化前なら通常のぴょこぴょこへ戻す。
+        renderTaskCharacter(currentStage);
+    }, 900);
+}
+
+// キャラの進化段階を取得して上部キャラを描画する。失敗時は進化前の絵のまま。
+let currentStage = 0;
+
+async function loadTaskCharacter(): Promise<void> {
+    try {
+        const initResponse = await fetch(
+            `${API_BASE}/api/characters/initialize`,
+            { method: "POST" },
+        );
+        if (!initResponse.ok) {
+            return;
+        }
+        const characterId: string = await initResponse.json();
+        const response = await fetch(
+            `${API_BASE}/api/characters/${characterId}`,
+        );
+        if (!response.ok) {
+            return;
+        }
+        const data = await response.json();
+        if (typeof data.evolution_stage === "number") {
+            currentStage = data.evolution_stage;
+        }
+    } catch (error) {
+        console.error("キャラクター情報の取得に失敗:", error);
+    }
+    renderTaskCharacter(currentStage);
+}
 
 
 // --------------------
@@ -210,9 +282,10 @@ async function toggleTask(task: Task): Promise<void> {
         task.done = nextDone;
         renderTasks();
 
-        // 未完了→完了のときだけ経験値が入る。
+        // 未完了→完了のときだけ経験値が入る。キャラも激しく喜ばせる。
         if (nextDone) {
             showMessage("経験値を獲得！ホームで確認しよう ✨");
+            celebrateTaskCharacter();
         }
     } catch (error) {
         console.error("タスクの更新に失敗:", error);
@@ -318,3 +391,4 @@ resetButton?.addEventListener("click", () => {
 
 renderTasks();
 void loadTasks();
+void loadTaskCharacter();

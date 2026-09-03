@@ -43,6 +43,11 @@
         <!-- キャラの状態メッセージ -->
         <p class="status" id="status">読み込み中…</p>
 
+        <!-- キャラのセリフ吹き出し（進化段階に応じたコメントをタイピング風に表示） -->
+        <div class="speech-bubble" id="speechBubble" aria-live="polite">
+            <span id="bubbleText"></span>
+        </div>
+
         <!-- キャラクター（進化段階に応じて画像が切り替わる） -->
         <div class="character">
             <img id="characterImage" src="images/deformed.png" alt="キャラクター">

@@ -8,6 +8,7 @@ from app import taxonomy
 from app.config import Settings
 from app.llm.interface import LLMClient, Message
 from app.models import Assessment, ConversationMessage, Session, SubtopicScore
+from app.services import persona as persona_tone
 
 ASSESSMENT_SYSTEM_PROMPT = (
     "あなたは学習者に寄り添う、フレンドリーな先輩チューターです。"
@@ -75,7 +76,8 @@ class AssessmentService:
     ) -> Assessment:
         subject = session.subject or DEFAULT_SUBJECT
         raw = self.llm.complete_structured(
-            system=ASSESSMENT_SYSTEM_PROMPT,
+            system=ASSESSMENT_SYSTEM_PROMPT
+            + persona_tone.assessment_tone(session.persona),
             messages=[Message(role=m.role.value, content=m.content) for m in history],
             schema=build_assessment_schema(subject),
             model_id=self.settings.assessment_model_id or None,
