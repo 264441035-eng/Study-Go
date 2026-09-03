@@ -432,4 +432,9 @@ def reset_character(
     db.commit()
     db.refresh(character)
 
+    # task側で循環importになるため、遅延importで今日の勉強時間もリセットする。
+    from app.routers.task import reset_today_study_session
+
+    reset_today_study_session()
+
     return to_character_out(character)
